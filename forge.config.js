@@ -21,20 +21,26 @@ export default {
                 setupIcon: './assets/icon.ico',
             },
         },
-        // Ubuntu
+
+        // Debian (ubuntu)
         {
             name: '@electron-forge/maker-deb',
             config: {
                 name: 'athena',
-                setupIcon: './assets/icon.png',
+                options: {
+                    icon: './assets/icon.png',
+                },
             },
         },
+
         // Fedora
         {
             name: '@electron-forge/maker-rpm',
             config: {
                 name: 'athena',
-                setupIcon: './assets/icon.png',
+                options: {
+                    icon: './assets/icon.png',
+                },
             },
         },
     ],
