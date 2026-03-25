@@ -42,10 +42,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.package_version.outputs.VERSION }}
-          name: Athena Release v${{ steps.package_version.outputs.VERSION }}
+          name: Release v${{ steps.package_version.outputs.VERSION }}
           generate_release_notes: true
           body: |
-            # Athena Release v${{ steps.package_version.outputs.VERSION }}
+            # Athena ${{ steps.package_version.outputs.VERSION }}
 
             ## Installation
             - Download the suitable file for your operating system.
@@ -56,10 +56,12 @@ jobs:
             - **[Report a Bug](${{ github.server_url }}/${{ github.repository }}/issues/new?template=bug_report.md)**
             - **[Request a Feature](${{ github.server_url }}/${{ github.repository }}/issues/new?template=feature_request.md)**
             - **[General Discussion](${{ github.server_url }}/${{ github.repository }}/issues)**
+            
             Alternatively, make a pull request
 
             ---
             Note that Athena is just a hobby side project, so don't expect much.
+            ---
           files: |
             out/make/**/*.exe
             out/make/**/*.rpm
