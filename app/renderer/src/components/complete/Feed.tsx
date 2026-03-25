@@ -108,6 +108,7 @@ const MonthCreator: Component = () => {
                             const tagsArray: Array<string> = [
                                 ...new Set(
                                     tagsString()
+                                        .toUpperCase()
                                         .split(',')
                                         .map((tag) => tag.trim())
                                         .filter((tag) => tag.length > 0),

@@ -1,4 +1,4 @@
-import { createMemo, For, Show, type Component } from 'solid-js'
+import { batch, createMemo, For, Show, type Component } from 'solid-js'
 import { ClearFilterButton } from './ClearFilterButton'
 import {
     selectedTags,
@@ -16,16 +16,18 @@ const generateVibrantColour = () => {
 
 export const pushMergeTags = (newTags: Array<string>) => {
     const transformed = newTags.map((tag) => tag.toUpperCase())
-    setTags((prev) => [...new Set([...prev, ...transformed])])
-    setTagColours((prev) => {
-        const nextColours = { ...prev }
-        transformed.forEach((tag) => {
-            if (!nextColours[tag]) {
-                nextColours[tag] = generateVibrantColour()
-            }
-        })
+    batch(() => {
+        setTagColours((prev) => {
+            const newColours = { ...prev }
+            transformed.forEach((tag) => {
+                if (!newColours[tag]) {
+                    newColours[tag] = generateVibrantColour()
+                }
+            })
 
-        return nextColours
+            return newColours
+        })
+        setTags((prev) => [...new Set([...prev, ...transformed])])
     })
 }
 
@@ -60,19 +62,21 @@ export const TagBar: Component = () => {
                 Selected Tags:
             </span>
             <For each={availableTags()}>
-                {(tag) => (
-                    <button
-                        onClick={() => toggleTag(tag)}
-                        class={`text-element rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
-                            selectedTags().includes(tag)
-                                ? 'shadow-highlight-strongest border-2 border-white shadow-sm'
-                                : `over:scale-105 hover:text-white`
-                        }`}
-                        style={`background-color: ${tagColours()[tag]}`}
-                    >
-                        #{tag}
-                    </button>
-                )}
+                {(tag) => {
+                    return (
+                        <button
+                            onClick={() => toggleTag(tag)}
+                            class={`text-element rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
+                                selectedTags().includes(tag)
+                                    ? 'shadow-highlight-strongest border-2 border-white shadow-sm'
+                                    : `over:scale-105 hover:text-white`
+                            }`}
+                            style={`background-color: ${tagColours()[tag]}`}
+                        >
+                            #{tag}
+                        </button>
+                    )
+                }}
             </For>
             <Show when={selectedTags().length > 0}>
                 <ClearFilterButton onClick={() => setSelectedTags([])} />
