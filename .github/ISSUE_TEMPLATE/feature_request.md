@@ -1,8 +1,8 @@
 ---
 name: Feature Request
 about: Suggest an idea to improve Athena
-title: '[Feature] '
-labels: bug
+title: '[Feature] Give the feature a name'
+labels: enhancement
 ---
 
 ## Describe the Feature
