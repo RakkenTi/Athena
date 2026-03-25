@@ -5,6 +5,7 @@ export default {
         icon: './assets/icon',
     },
     makers: [
+        // Windows
         {
             name: '@electron-forge/maker-squirrel',
             config: {
@@ -20,18 +21,20 @@ export default {
                 setupIcon: './assets/icon.ico',
             },
         },
+        // Ubuntu
         {
             name: '@electron-forge/maker-deb',
             config: {
                 name: 'athena',
-                setupIcon: './assets/icon.ico',
+                setupIcon: './assets/icon.png',
             },
         },
+        // Fedora
         {
             name: '@electron-forge/maker-rpm',
             config: {
                 name: 'athena',
-                setupIcon: './assets/icon.ico',
+                setupIcon: './assets/icon.png',
             },
         },
     ],
