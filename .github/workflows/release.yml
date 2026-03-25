@@ -1,0 +1,47 @@
+name: Create Release
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  windows-release:
+    runs-on: windows-latest 
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install All Dependencies
+        run: npm install
+
+      - name: Build and Package
+        run: npm run make
+
+      - name: Get Version
+        id: package_version
+        shell: bash
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.package_version.outputs.VERSION }}-windows
+          name: Athena Windows Release v${{ steps.package_version.outputs.VERSION }}
+          body: |
+            ## Athena Windows Release v${{ steps.package_version.outputs.VERSION }}
+            This is an automated windows build of Athena (formerly Moments).
+          files: |
+            out/make/**/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

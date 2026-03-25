@@ -1,0 +1,51 @@
+{
+    "name": "athena",
+    "productName": "Athena",
+    "version": "0.1.0",
+    "description": "A simple app to store your moments in archives. Featuring a special filtering system to easily find what you need.",
+    "main": "app/entry.mjs",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "create:renderer": "node scripts/renderer/create_renderer.mjs",
+        "build:all": "npm run build -w @app/main && npm run build -w @app/preload && npm run build -w @app/renderer",
+        "build:norenderer": "npm run build -w @app/main && npm run build -w @app/preload",
+        "dev:main": "npm run build:norenderer && cross-env DEV=true npx electron app/entry.mjs",
+        "dev:renderer": "npm run dev -w @app/renderer",
+        "dev:watch": "nodemon --watch app/main/src --exec \"npm run dev:main\"",
+        "dev": "npm install && node app/dev.mjs",
+        "start": "npm install && electron-forge start",
+        "package": "npm install && npm run build:all && electron-forge package",
+        "make": "npm install && rimraf ./out && npm run build:all && electron-forge make",
+        "publish": "npm install && electron-forge publish"
+    },
+    "repository": {
+        "type": "git",
+        "url": "Moment"
+    },
+    "author": "Mark Martinez",
+    "license": "MIT",
+    "devDependencies": {
+        "@electron-forge/cli": "^7.11.1",
+        "@electron-forge/maker-deb": "^7.11.1",
+        "@electron-forge/maker-rpm": "^7.11.1",
+        "@electron-forge/maker-squirrel": "^7.11.1",
+        "@electron-forge/maker-zip": "^7.11.1",
+        "@types/node": "^25.5.0",
+        "concurrently": "^9.2.1",
+        "cross-env": "^10.1.0",
+        "electron": "^41.0.3",
+        "eslint": "^10.1.0",
+        "nodemon": "^3.1.14",
+        "prettier": "^3.8.1",
+        "prettier-plugin-tailwindcss": "^0.7.2",
+        "rimraf": "^6.1.3"
+    },
+    "dependencies": {
+        "@app/main": "*",
+        "electron-squirrel-startup": "^1.0.1"
+    },
+    "workspaces": [
+        "app/*"
+    ]
+}
