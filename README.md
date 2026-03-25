@@ -1,4 +1,4 @@
-# Athena, formerly Moments
+# Athena
 
 A simple, fast, and very opinionated library of moments. Essentially acting as a personal mini-blog application, Athena focuses on capturing bite-sized and extensively filterable momnets.
 
