@@ -1,7 +1,7 @@
 {
     "name": "athena",
     "productName": "Athena",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "A simple app to store your moments in archives. Featuring a special filtering system to easily find what you need.",
     "main": "app/entry.mjs",
     "private": true,
