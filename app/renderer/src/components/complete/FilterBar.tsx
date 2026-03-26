@@ -26,6 +26,7 @@ export const FilterBar: Component = () => {
         const localStart = new Date(year, month - 1, day, 0, 0, 0, 0)
         const localEnd = new Date(year, month - 1, day, 23, 59, 59, 999)
 
+        
         if (context == 'start') {
             setDateFilter((prev) => ({ ...prev, start: localStart }))
         } else {
@@ -47,7 +48,10 @@ export const FilterBar: Component = () => {
         ) {
             return ''
         } else {
-            return date.toISOString().split('T')[0]
+            const year = date.getFullYear()
+            const month = `${date.getMonth()}`.padStart(2, '0')
+            const day = `${date.getDate()}`.padStart(2, '0')
+            return `${year}-${month}-${day}`;
         }
     }
 
