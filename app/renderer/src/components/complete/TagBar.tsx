@@ -6,6 +6,7 @@ import {
     setTagColours,
     setTags,
     tagColours,
+    tags,
 } from '../../modules/data'
 import { getFilteredMoments } from './Feed'
 
@@ -31,8 +32,47 @@ export const pushMergeTags = (newTags: Array<string>) => {
     })
 }
 
+/**
+ * Sorts tags by relevance
+ *
+ * Relevance is defined by which tags are most currently used in the current context.
+ *
+ * Context is defined as the currently displayed moments.
+ */
+export const sortTags = (tags: Array<string>) => {
+    const currentFilteredMoments = getFilteredMoments()
+    const visibleTags = currentFilteredMoments.flatMap((m) => m.tags)
+    const countMap: Record<string, number> = {}
+
+    for (const tag of visibleTags) {
+        if (!countMap[tag]) {
+            countMap[tag] = 1
+        } else {
+            countMap[tag] += 1
+        }
+    }
+
+    return [...tags].sort((a, b) => {
+        const aWeight = countMap[a]
+        const bWeight = countMap[b]
+        if (aWeight && bWeight) {
+            if (aWeight > bWeight) {
+                return -1
+            } else {
+                return 1
+            }
+        } else if (aWeight) {
+            return -1
+        } else if (bWeight) {
+            return 1
+        }
+        return 0
+    })
+}
+
 export const TagBar: Component = () => {
     const availableTags = createMemo(() => {
+        tags()
         const currentSelected = selectedTags()
 
         const remainingMoments = getFilteredMoments().filter((moment) =>
@@ -44,7 +84,9 @@ export const TagBar: Component = () => {
             moment.tags.forEach((tag) => remainingTags.add(tag)),
         )
 
-        return Array.from(remainingTags)
+        const result = sortTags(Array.from(remainingTags))
+
+        return result
     })
 
     const toggleTag = (tag: string) => {
