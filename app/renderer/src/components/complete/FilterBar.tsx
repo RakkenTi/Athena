@@ -3,13 +3,13 @@ import { InputFrame } from '../barebone/InputFrame'
 import { Line } from '../barebone/Line'
 import { ClearFilterButton } from './ClearFilterButton'
 import {
-    availableUrlFiltersAndNicknames,
+    availableURLFiltersAndNicknames,
     BeginningOfTime,
     dateFilter,
     EndOfTime,
-    selectedUrlFilters,
+    selectedURLFilters,
     setDateFilter,
-    setSelectedUrlFilters,
+    setSelectedURLFilters,
 } from '../../modules/data'
 
 export const FilterBar: Component = () => {
@@ -52,17 +52,17 @@ export const FilterBar: Component = () => {
     }
 
     const toggleMediaFilter = (url: string) => {
-        const lowerUrl = url.toLowerCase()
-        setSelectedUrlFilters((prev) => {
-            if (prev.includes(lowerUrl)) {
-                return prev.filter((current_url) => current_url != lowerUrl)
+        const lowerURL = url.toLowerCase()
+        setSelectedURLFilters((prev) => {
+            if (prev.includes(lowerURL)) {
+                return prev.filter((current_url) => current_url != lowerURL)
             }
-            return [...prev, lowerUrl]
+            return [...prev, lowerURL]
         })
     }
 
     const getMediaFilterArray = createMemo(() =>
-        Object.entries(availableUrlFiltersAndNicknames()),
+        Object.entries(availableURLFiltersAndNicknames()),
     )
 
     return (
@@ -101,7 +101,7 @@ export const FilterBar: Component = () => {
                 <span class="text-sub text-md font-mono tracking-widest">
                     Media
                 </span>
-                <ClearFilterButton onClick={() => setSelectedUrlFilters([])} />
+                <ClearFilterButton onClick={() => setSelectedURLFilters([])} />
             </div>
             <div class="flex flex-col gap-2">
                 <For each={getMediaFilterArray()}>
@@ -109,7 +109,7 @@ export const FilterBar: Component = () => {
                         <div class="group p-1">
                             <span
                                 onClick={() => toggleMediaFilter(url)}
-                                class={`${selectedUrlFilters().includes(url.toLowerCase()) ? 'text-highlight-strongest' : 'text-sub'} group-hover:text-highlight-strongest block font-semibold tracking-tight transition-all duration-200 select-none group-hover:scale-105 group-hover:cursor-pointer hover:font-bold hover:tracking-widest active:scale-100`}
+                                class={`${selectedURLFilters().includes(url.toLowerCase()) ? 'text-highlight-strongest' : 'text-sub'} group-hover:text-highlight-strongest block font-semibold tracking-tight transition-all duration-200 select-none group-hover:scale-105 group-hover:cursor-pointer hover:font-bold hover:tracking-widest active:scale-100`}
                             >
                                 [ {nickname || url || 'hello'} ]
                             </span>

@@ -1,5 +1,9 @@
 import {
+    createEffect,
     createResource,
+    createSignal,
+    onCleanup,
+    onMount,
     Show,
     type Component,
     type ComponentProps,
@@ -28,9 +32,28 @@ const siteMap: Array<{
 ]
 
 export const LinkPreview: Component<LinkPreviewProps> = (props) => {
+    let containerRef: HTMLDivElement | undefined
+    const [inView, setInView] = createSignal<boolean>(false)
+
+    onMount(() => {
+        const viewObserver = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setInView(true)
+                } else {
+                    setInView(false)
+                }
+            },
+            { rootMargin: '1000px' },
+        )
+        if (containerRef) viewObserver.observe(containerRef)
+        onCleanup(viewObserver.disconnect)
+    })
+
     const [websiteData] = createResource(
-        () => props.url,
+        () => (inView() ? props.url : null),
         async (url) => {
+            console.log('Attempting to get data for: ', props.url)
             const cache = linkPreviewCache()
 
             if (cache && cache[props.url]) {
@@ -39,7 +62,10 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
             }
 
             const api = getApi()
-            if (!api) return null
+            if (!api) {
+                console.log(`No api found. Returning`)
+                return null
+            }
             const result = await api.scrapeWebsiteData(url)
             console.log(
                 'Fetched link preview data for the first time. Saving to cache.',
@@ -93,9 +119,37 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
 
     const videoLink = () => getVideoLink(props.url)
 
+    createEffect(() => {
+        console.log(`Website data for ${props.url}:`, websiteData())
+    })
+
     return (
-        <Show when={websiteData()}>
-            <div class="bg-element-accent border-sub hover:border-highlight-strongest my-2 flex flex-col gap-2 rounded border-2 p-2">
+        <div
+            ref={containerRef}
+            class="bg-highlight border-sub hover:border-highlight-strongest flex min-h-20 w-full flex-col gap-1 rounded border-2 p-2 transition-all duration-300"
+        >
+            <Show
+                when={
+                    websiteData() &&
+                    (websiteData()?.image || websiteData()?.video) &&
+                    inView()
+                }
+                fallback={
+                    <div
+                        onClick={() => getApi().openExternalBrowser(props.url)}
+                        class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border-2 p-2 hover:cursor-pointer"
+                    >
+                        <div class="flex w-full justify-between">
+                            <span class="text-highlight-strong group font-black">
+                                {websiteData()?.title || props.url}
+                            </span>
+                            <span class="text-element-accent-highlight group font-black">
+                                No Media Data
+                            </span>
+                        </div>
+                    </div>
+                }
+            >
                 <div class="flex justify-between">
                     <div class="flex min-w-0 items-center gap-3 pr-2">
                         <img
@@ -143,7 +197,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                                     class="aspect-video h-full w-full"
                                     src={link() as string}
                                     title="YouTube video player"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                     referrerpolicy="no-referrer"
                                     allowfullscreen
                                 ></iframe>
@@ -154,7 +208,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                 <div class="flex justify-between">
                     <span class="text-element-accent-highlight line-clamp-3 text-sm italic">{`${websiteData()?.description || ''}`}</span>
                 </div>
-            </div>
-        </Show>
+            </Show>
+        </div>
     )
 }

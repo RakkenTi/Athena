@@ -1,6 +1,8 @@
 import {
-    createEffect,
+    createSignal,
     For,
+    onCleanup,
+    onMount,
     Show,
     type Component,
     type ComponentProps,
@@ -13,8 +15,7 @@ import {
     URL_REGEX,
 } from '../../modules/regex'
 import {
-    selectedArchive,
-    setAvailableUrlFiltersAndNicknames,
+    setAvailableURLFiltersAndNicknames,
     tagColours,
 } from '../../modules/data'
 
@@ -29,16 +30,13 @@ export interface Moment {
 export type MomentProps = Moment & ComponentProps<'div'>
 
 export const Moment: Component<MomentProps> = (props) => {
+    let containerRef: HTMLDivElement | undefined
     props.tags = props.tags.map((tag) => tag.toUpperCase())
 
-    const contentParts = () => props.content.split(URL_REGEX)
-
-    const isVisible = () => {
-        return (
-            selectedArchive()?.toUpperCase().trim() ===
-                props.archive?.toUpperCase().trim() || !selectedArchive()
-        )
-    }
+    const contentParts = () =>
+        props.content
+            .split(URL_REGEX)
+            .filter((fragment) => fragment.trim() !== '')
 
     // extract urls
     for (const text of contentParts()) {
@@ -50,7 +48,7 @@ export const Moment: Component<MomentProps> = (props) => {
             if (match && match.groups) {
                 const domainName = match.groups.domain
 
-                setAvailableUrlFiltersAndNicknames((prev) => ({
+                setAvailableURLFiltersAndNicknames((prev) => ({
                     ...prev,
                     [match[0].toLowerCase()]: domainName.toUpperCase(),
                 }))
@@ -58,9 +56,22 @@ export const Moment: Component<MomentProps> = (props) => {
         }
     }
 
-    createEffect(() => {
-        if (isVisible()) {
-        }
+    const [inView, setInView] = createSignal<boolean>(false)
+
+    onMount(() => {
+        const viewObserver = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setInView(true)
+                    viewObserver.disconnect()
+                } else {
+                    setInView(false)
+                }
+            },
+            { rootMargin: '1000px' },
+        )
+        if (containerRef) viewObserver.observe(containerRef)
+        onCleanup(viewObserver.disconnect)
     })
 
     const months = [
@@ -79,54 +90,62 @@ export const Moment: Component<MomentProps> = (props) => {
     ]
 
     return (
-        <div class="xl bg-element border-element-accent flex w-full flex-col gap-2 rounded border p-4">
-            <div class="flex flex-col flex-wrap gap-2">
-                <div class="flex w-full justify-between">
-                    <Show when={props.archive}>
-                        <span class="text-sub text-md w-full pr-1 font-bold tracking-tight">
-                            [ {props.archive} ]
+        <div
+            ref={containerRef}
+            class="bg-element border-element-accent flex w-full flex-col gap-2 rounded border p-4"
+        >
+            <Show when={inView()}>
+                <div class="flex flex-col flex-wrap gap-2">
+                    <div class="flex w-full justify-between">
+                        <Show when={props.archive}>
+                            <span class="text-sub text-md w-full pr-1 font-bold tracking-tight">
+                                [ {props.archive} ]
+                            </span>
+                        </Show>
+                        <span class="text-sub text-xs font-semibold tracking-wider">
+                            {(() => {
+                                const timestamp = props.timestamp
+                                let timeSuffix: 'am' | 'pm' = 'am'
+                                let hour = timestamp.getHours()
+                                if (hour > 12) {
+                                    hour -= 12
+                                    timeSuffix = 'pm'
+                                }
+                                return `${timestamp.getFullYear()} ${months[timestamp.getMonth()]} ${timestamp.getDate()}, at ${hour}:${timestamp.getMinutes()}${timeSuffix.toUpperCase()}`
+                            })()}
                         </span>
-                    </Show>
-                    <span class="text-sub text-xs font-semibold tracking-wider">
-                        {(() => {
-                            const timestamp = props.timestamp
-                            let timeSuffix: 'am' | 'pm' = 'am'
-                            let hour = timestamp.getHours()
-                            if (hour > 12) {
-                                hour -= 12
-                                timeSuffix = 'pm'
-                            }
-                            return `${timestamp.getFullYear()} ${months[timestamp.getMonth()]} ${timestamp.getDay()}, at ${hour}:${timestamp.getMinutes()}${timeSuffix.toUpperCase()}`
-                        })()}
+                    </div>
+                    <span class="tracking text-4xl font-black">
+                        {props.title}
                     </span>
                 </div>
-                <span class="tracking text-4xl font-black">{props.title}</span>
-            </div>
-            <span class="text-element-accent-highlight flex flex-col gap-4 text-sm whitespace-pre-line">
-                <For each={contentParts()}>
-                    {(text) => {
-                        if (!text.match(URL_REGEX)) return <p>{text}</p>
-                        return <LinkPreview url={text} />
-                    }}
-                </For>
-            </span>
-            <Show when={props.tags.length > 0}>
-                <Line class="bg-element-accent h-1 w-full" />
-                <div class="flex flex-wrap items-center gap-2 text-wrap">
-                    <For each={props.tags}>
-                        {(tag) => {
-                            const tagColour = tagColours()[tag]
-                            return (
-                                <span
-                                    class={`text-dark tracking-tightest rounded-md px-2 py-1 text-center text-xs font-black break-all md:p-2`}
-                                    style={`background-color: ${tagColour}`}
-                                >
-                                    #{tag}
-                                </span>
-                            )
+                <span class="text-element-accent-highlight flex flex-col gap-2 text-sm whitespace-pre-line">
+                    <For each={contentParts()}>
+                        {(text) => {
+                            if (!text.match(URL_REGEX))
+                                return <span>{text}</span>
+                            return <LinkPreview url={text} />
                         }}
                     </For>
-                </div>
+                </span>
+                <Show when={props.tags.length > 0}>
+                    <Line class="bg-element-accent h-1 w-full" />
+                    <div class="flex flex-wrap items-center gap-2 text-wrap">
+                        <For each={props.tags}>
+                            {(tag) => {
+                                const tagColour = tagColours()[tag]
+                                return (
+                                    <span
+                                        class={`text-dark tracking-tightest rounded-md px-2 py-1 text-center text-xs font-black break-all md:p-2`}
+                                        style={`background-color: ${tagColour}`}
+                                    >
+                                        #{tag}
+                                    </span>
+                                )
+                            }}
+                        </For>
+                    </div>
+                </Show>
             </Show>
         </div>
     )

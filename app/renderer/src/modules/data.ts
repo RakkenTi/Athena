@@ -47,11 +47,11 @@ export const [dateFilter, setDateFilter] = createSignal<{
 
 // url:nickname
 export const [
-    availableUrlFiltersAndNicknames,
-    setAvailableUrlFiltersAndNicknames,
+    availableURLFiltersAndNicknames,
+    setAvailableURLFiltersAndNicknames,
 ] = createSignal<Record<string, string>>({})
 
-export const [selectedUrlFilters, setSelectedUrlFilters] = createSignal<
+export const [selectedURLFilters, setSelectedURLFilters] = createSignal<
     Array<string>
 >([])
 
@@ -116,9 +116,35 @@ if (!import.meta.env.DEV) {
 }
 
 // Saving
+const createDebounce = (callback: Function, timeoutDuration: number) => {
+    let timeoutId: number | undefined
+
+    return (...args: Array<any>) => {
+        if (timeoutId) {
+            window.clearTimeout(timeoutId)
+        }
+        timeoutId = window.setTimeout(() => {
+            callback(...args)
+        }, timeoutDuration)
+    }
+}
+
+export interface dataSnapshot {
+    archives: ReturnType<typeof archives>
+    moments: ReturnType<typeof allMoments>
+    tags: ReturnType<typeof tags>
+    tagColours: ReturnType<typeof tagColours>
+    linkPreviewCache: ReturnType<typeof linkPreviewCache>
+}
+
+const writeSave = createDebounce((snapshot: dataSnapshot) => {
+    getApi().writeData(snapshot)
+    console.log('Saved Data!')
+}, 1500)
+
 createRoot(() => {
     createEffect(() => {
-        const snapshot = {
+        const snapshot: dataSnapshot = {
             archives: archives(),
             moments: allMoments(),
             tags: tags(),
@@ -129,7 +155,6 @@ createRoot(() => {
         console.log('Snapshot to save:', snapshot)
 
         if (!isLoaded) return
-        getApi().writeData(snapshot)
-        console.log('Saved Data!')
+        writeSave(snapshot)
     })
 })
