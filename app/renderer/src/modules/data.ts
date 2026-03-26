@@ -56,7 +56,7 @@ export const [selectedURLFilters, setSelectedURLFilters] = createSignal<
 >([])
 
 // Loading, must happen at least once before saving!
-let isLoaded = true
+let isLoaded = false
 
 const loadData = async () => {
     isLoaded = false
@@ -66,18 +66,18 @@ const loadData = async () => {
     console.log(log_header)
     console.log('Loading data:', readData)
 
-    if (readData.archives) {
-        setArchives(readData.archives)
-        console.log('Loaded archives.')
-    } else {
-        console.error('No archives!')
-    }
-
     if (readData.linkPreviewCache) {
         setLinkPreviewCache(readData.linkPreviewCache)
         console.log('Loaded link previews.')
     } else {
         console.error(`No link preview cache.`)
+    }
+
+    if (readData.archives) {
+        setArchives(readData.archives)
+        console.log('Loaded archives.')
+    } else {
+        console.error('No archives!')
     }
 
     // Important to load tags before moments as moments depend on tags
@@ -97,11 +97,13 @@ const loadData = async () => {
 
     if (readData.moments) {
         const rawMoments = readData.moments as Array<Moment>
+        const moments = []
         for (const moment of rawMoments) {
             moment.timestamp = new Date(moment.timestamp)
+            moments.push(moment)
         }
         console.log('Loaded moments.')
-        setAllMoments(readData.moments)
+        setAllMoments(moments)
     } else {
         console.error('No moments!')
     }
@@ -140,7 +142,7 @@ export interface dataSnapshot {
 const writeSave = createDebounce((snapshot: dataSnapshot) => {
     getApi().writeData(snapshot)
     console.log('Saved Data!')
-}, 1500)
+}, 250)
 
 createRoot(() => {
     createEffect(() => {
@@ -152,9 +154,8 @@ createRoot(() => {
             linkPreviewCache: linkPreviewCache(),
         }
 
-        console.log('Snapshot to save:', snapshot)
-
         if (!isLoaded) return
+        console.log('Snapshot to save:', snapshot)
         writeSave(snapshot)
     })
 })

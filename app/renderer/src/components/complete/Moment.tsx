@@ -1,4 +1,5 @@
 import {
+    createEffect,
     createSignal,
     For,
     onCleanup,
@@ -39,22 +40,24 @@ export const Moment: Component<MomentProps> = (props) => {
             .filter((fragment) => fragment.trim() !== '')
 
     // extract urls
-    for (const text of contentParts()) {
-        if (text.match(URL_REGEX)) {
-            const match =
-                text.match(URL_MAIN_DOMAIN_REGEX) ||
-                text.match(URL_DOMAIN_REGEX)
+    createEffect(() => {
+        for (const text of contentParts()) {
+            if (text.match(URL_REGEX)) {
+                const match =
+                    text.match(URL_MAIN_DOMAIN_REGEX) ||
+                    text.match(URL_DOMAIN_REGEX)
 
-            if (match && match.groups) {
-                const domainName = match.groups.domain
+                if (match && match.groups) {
+                    const domainName = match.groups.domain
 
-                setAvailableURLFiltersAndNicknames((prev) => ({
-                    ...prev,
-                    [match[0].toLowerCase()]: domainName.toUpperCase(),
-                }))
+                    setAvailableURLFiltersAndNicknames((prev) => ({
+                        ...prev,
+                        [match[0].toLowerCase()]: domainName.toUpperCase(),
+                    }))
+                }
             }
         }
-    }
+    })
 
     const [inView, setInView] = createSignal<boolean>(false)
 
@@ -71,7 +74,7 @@ export const Moment: Component<MomentProps> = (props) => {
             { rootMargin: '1000px' },
         )
         if (containerRef) viewObserver.observe(containerRef)
-        onCleanup(viewObserver.disconnect)
+        onCleanup(() => viewObserver.disconnect)
     })
 
     const months = [
