@@ -7,7 +7,6 @@ import { ELECTRON_AGENT_REGEX } from '@app/renderer/src/modules/regex'
 
 const getDataPath = () => {
     if (process.env.DEV) {
-        console.log('Dev environment detected. Returning alternate data.json')
         return path.join(app.getPath('userData'), 'dev_monents_data.json')
     } else {
         return path.join(app.getPath('userData'), 'monents_data.json')
@@ -67,7 +66,6 @@ export const Api: IPC_API = {
 
             fs.writeFileSync(bufferPath, formattedData, 'utf-8')
             fs.renameSync(bufferPath, targetPath)
-            console.log('Wrote to:', bufferPath)
         } catch (error) {
             console.error('Failed to save moments data:', error)
         }
