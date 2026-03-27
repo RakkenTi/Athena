@@ -199,7 +199,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                                     src={link() as string}
                                     title="YouTube video player"
                                     allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    referrerpolicy="no-referrer"
+                                    referrerpolicy="strict-origin-when-cross-origin"
                                     allowfullscreen
                                 ></iframe>
                             )

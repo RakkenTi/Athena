@@ -10,7 +10,7 @@
     --color-highlight-strongest: color-mix(in srgb, var(--color-cyan-500) 100%, transparent);
     --color-highlight-alt: color-mix(in srgb, var(--color-pink-500) 20%, transparent);
     --color-highlight-alt-strong: color-mix(in srgb, var(--color-pink-500) 80%, transparent);
-    --color-highlight-alt-strongest: color-mix(in srgb, var(--color-pink-500) 10%, transparent);
+    --color-highlight-alt-strongest: color-mix(in srgb, var(--color-pink-500) 100%, transparent);
     --color-background: var(--color-slate-900);
     --color-main: var(--color-slate-300);
     --color-sub: var(--color-slate-500);
