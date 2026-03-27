@@ -313,6 +313,7 @@ export const deleteMoment = (uuid: MomentId) => {
         }
         return result
     })
+
     return true
 }
 

@@ -62,7 +62,7 @@ export const Api: IPC_API = {
         try {
             const targetPath = getDataPath()
             const bufferPath = targetPath + '.tmp'
-            const formattedData = JSON.stringify(data)
+            const formattedData = JSON.stringify(data, null, 2)
 
             fs.writeFileSync(bufferPath, formattedData, 'utf-8')
             fs.renameSync(bufferPath, targetPath)

@@ -44,7 +44,7 @@ export const Archive: Component<
 
     return (
         <button
-            onClick={() => {
+            onClick={(e) => {
                 if (selectedArchiveId() === props.archiveId)
                     return setSelectedArchive(defaultArchiveId)
                 setSelectedArchive(props.archiveId)
@@ -66,21 +66,26 @@ export const Archive: Component<
                             ref={bufferNameRef}
                             type="text"
                             value={bufferName()}
-                            onInput={(e) =>
+                            onInput={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
                                 setBufferName(
-                                    e.currentTarget.value.toUpperCase(),
+                                    e.currentTarget.value.trim().toUpperCase(),
                                 )
-                            }
+                            }}
                             onFocusOut={() => {
                                 setIsEditing(false)
                                 setBufferName(archiveName())
                             }}
                             onKeyDown={(e) => {
+                                e.stopPropagation()
                                 if (e.key == 'Enter') {
                                     const newName = bufferName().toUpperCase()
-                                    updateArchive(props.archiveId, {
-                                        name: newName,
-                                    })
+                                    if (newName.trim() != '') {
+                                        updateArchive(props.archiveId, {
+                                            name: newName,
+                                        })
+                                    }
                                     setIsEditing(false)
                                 }
                                 if (e.key == 'Escape') {

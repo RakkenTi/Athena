@@ -92,7 +92,7 @@ export const Moment: Component<MomentProps> = (props) => {
     return (
         <div
             ref={containerRef}
-            class="bg-element border-element-accent flex w-full flex-col gap-2 rounded border p-4"
+            class="group bg-element hover:bg-element-accent border-element-accent flex w-full flex-col items-start gap-2 rounded border p-4"
         >
             <Show when={inView()}>
                 <div class="flex flex-col flex-wrap gap-2">
