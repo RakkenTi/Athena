@@ -1,11 +1,13 @@
-import { For, Show, type Component } from 'solid-js'
+import { createMemo, For, Show, type Component } from 'solid-js'
 import { ClearFilterButton } from './ClearFilterButton'
 import {
     selectedTagIds,
     setSelectedTagIds,
     tags,
+    type Tag,
     type TagId,
 } from '../../modules/data'
+import { getFilteredMoments, sortTags } from '../../modules/utils'
 
 export const TagBar: Component = () => {
     const toggleTag = (tagId: TagId) => {
@@ -17,12 +19,30 @@ export const TagBar: Component = () => {
         })
     }
 
+    const availableTags = createMemo(() => {
+        tags()
+        const currentSelected = selectedTagIds()
+
+        const remainingMoments = getFilteredMoments().filter((moment) =>
+            currentSelected.every((tagId) => moment.tagIds.includes(tagId)),
+        )
+
+        const remainingTags = new Set<Tag>()
+        remainingMoments.forEach((moment) =>
+            moment.tagIds.forEach((tagId) => remainingTags.add(tags()[tagId])),
+        )
+
+        const result = sortTags(Array.from(remainingTags))
+
+        return result
+    })
+
     return (
         <div class="bg-element z-10 flex w-full flex-wrap items-center justify-center gap-2 p-2 backdrop-blur-md transition-all lg:p-6">
             <span class="text-sub text-xs font-black tracking-widest uppercase">
                 Selected Tags:
             </span>
-            <For each={Object.values(tags())}>
+            <For each={availableTags()}>
                 {(tagData) => {
                     return (
                         <button
