@@ -21,16 +21,18 @@ import {
     archives,
     defaultArchiveId,
     setAvailableURLFiltersAndNicknames,
-    tags,
+    allTags,
     type MomentData,
 } from '../modules/data'
 import { FilePreview } from './FilePreview'
 import {
     displayedModal,
     iconClasses,
+    rootMarginPixels,
     setContent,
     setDisplayedModal,
     setEditingMoment,
+    setMomentToDelete,
     setTagsString,
     setTitle,
 } from '../modules/globals'
@@ -88,7 +90,7 @@ export const Moment: Component<MomentProps> = (props) => {
                     setInView(false)
                 }
             },
-            { rootMargin: '4000px' },
+            { rootMargin: `${rootMarginPixels}px` },
         )
         if (containerRef) viewObserver.observe(containerRef)
         onCleanup(() => viewObserver.disconnect())
@@ -141,7 +143,7 @@ export const Moment: Component<MomentProps> = (props) => {
                                     setContent(data.content)
                                     setTagsString(
                                         [...data.tagIds]
-                                            .map((tagId) => tags()[tagId].name)
+                                            .map((tagId) => allTags[tagId].name)
                                             .join(',') + ',',
                                     )
                                     setEditingMoment(data.uuid)
@@ -153,9 +155,11 @@ export const Moment: Component<MomentProps> = (props) => {
                                     `${isConfirmingDelete() ? 'fa-check' : 'fa-trash'}`
                                 }
                                 onClick={() => {
+                                    setMomentToDelete()
                                     if (!isConfirmingDelete()) {
                                         setIsConfirmingDelete(true)
                                     } else {
+                                        setMomentToDelete(data.uuid)
                                         setDisplayedModal(
                                             'CONFIRM_MOMENT_DELETE',
                                         )
@@ -187,7 +191,7 @@ export const Moment: Component<MomentProps> = (props) => {
                     <div class="flex flex-wrap items-center gap-2 text-wrap">
                         <For each={data.tagIds}>
                             {(tagId) => {
-                                const tagData = tags()[tagId]
+                                const tagData = allTags[tagId]
                                 const tagColour = tagData.colour
                                 return (
                                     <span

@@ -3,7 +3,7 @@ import { ClearFilterButton } from './ClearFilterButton'
 import {
     selectedTagIds,
     setSelectedTagIds,
-    tags,
+    allTags,
     type Tag,
     type TagId,
 } from '../modules/data'
@@ -20,7 +20,7 @@ export const TagBar: Component = () => {
     }
 
     const availableTags = createMemo(() => {
-        tags()
+        allTags
         const currentSelected = selectedTagIds()
 
         const remainingMoments = getFilteredMoments().filter((moment) =>
@@ -29,7 +29,7 @@ export const TagBar: Component = () => {
 
         const remainingTags = new Set<Tag>()
         remainingMoments.forEach((moment) =>
-            moment.tagIds.forEach((tagId) => remainingTags.add(tags()[tagId])),
+            moment.tagIds.forEach((tagId) => remainingTags.add(allTags[tagId])),
         )
 
         const result = sortTags(Array.from(remainingTags))

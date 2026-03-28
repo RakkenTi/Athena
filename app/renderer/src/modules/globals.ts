@@ -9,7 +9,7 @@ import {
     type MomentData,
     type MomentId,
 } from './data'
-import { tags, type Tag } from './data'
+import { allTags, type Tag } from './data'
 
 export const generateVibrantColour = () => {
     const hue = Math.floor(Math.random() * 360)
@@ -24,7 +24,6 @@ export const generateVibrantColour = () => {
  * Context is defined as the currently displayed moments.
  */
 export const sortTags = (tagsToSort: Array<Tag>) => {
-    const allTags = tags()
     const currentFilteredMoments = getFilteredMoments()
     const visibleTagIds = currentFilteredMoments.flatMap((m) => m.tagIds)
     const countMap: Record<string, number> = {}
@@ -121,7 +120,12 @@ export const [tagsString, setTagsString] = createSignal<string>('')
 // Editing Moments
 export const [editingMoment, setEditingMoment] = createSignal<
     MomentId | undefined
->(undefined)
+>()
+
+// Deleting Moments
+export const [momentToDelete, setMomentToDelete] = createSignal<
+    MomentId | undefined
+>()
 
 // Modals
 export type MODAL_NAMES = 'NONE' | 'EDIT_MODAL' | 'CONFIRM_MOMENT_DELETE'
@@ -132,3 +136,5 @@ export const [displayedModal, setDisplayedModal] =
 // Constants
 export const iconClasses =
     'opacity-0 group-hover:opacity-100 fa-solid text-highlight-alt-strong hover:text-highlight-alt-strongest hover:scale-125 hover:cursor-pointer transition-all duration-200 '
+
+export const rootMarginPixels = 2000

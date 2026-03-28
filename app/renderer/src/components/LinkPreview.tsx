@@ -15,6 +15,7 @@ import {
     YOUTUBE_ID_REGEX,
 } from '../modules/regex'
 import { linkPreviewCache, setLinkPreviewCache } from '../modules/data'
+import { rootMarginPixels } from '../modules/globals'
 
 interface LinkPreviewProps extends ComponentProps<'div'> {
     url: string
@@ -44,7 +45,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                     setInView(false)
                 }
             },
-            { rootMargin: '4000px' },
+            { rootMargin: `${rootMarginPixels}px` },
         )
         if (containerRef) viewObserver.observe(containerRef)
         onCleanup(() => viewObserver.disconnect())
@@ -93,7 +94,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
             return null
         }
 
-        return `https://www.youtube-nocookie.com/embed/${id}?autoplayer=0`
+        return `https://www.youtube-nocookie.com/embed/${id}?autoplay=0`
     }
 
     const openDirectImage = (url?: string) => {

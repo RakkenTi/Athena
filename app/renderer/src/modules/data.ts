@@ -61,8 +61,9 @@ export interface Tag {
     id: TagId
     name: string
     colour: string
+    refCount: number
 }
-export const [tags, setTags] = createSignal<Record<TagId, Tag>>({}) // tag_id: tag
+export const [allTags, setAllTags] = createStore<Record<TagId, Tag>>({}) // tag_id: tag
 export const [selectedTagIds, setSelectedTagIds] = createSignal<Array<TagId>>(
     [],
 ) // tag id
@@ -110,7 +111,7 @@ const loadData = async () => {
 
     // Important to load tags before moments as moments depend on tags
     if (readData.tags) {
-        setTags(readData.tags)
+        setAllTags(readData.tags)
         console.log('Loaded tags.')
     } else {
         console.error('No tags!')
@@ -154,7 +155,7 @@ export interface dataSnapshot {
     version: string
     archives: ReturnType<typeof archives>
     moments: typeof allMoments
-    tags: ReturnType<typeof tags>
+    tags: typeof allTags
     linkPreviewCache: ReturnType<typeof linkPreviewCache>
 }
 
@@ -169,7 +170,7 @@ createRoot(() => {
             version,
             archives: archives(),
             moments: unwrap(allMoments),
-            tags: tags(),
+            tags: unwrap(allTags),
             linkPreviewCache: linkPreviewCache(),
         }
 
@@ -219,23 +220,16 @@ export const deleteArchive = (archiveId: ArchiveId) => {
         }
 
         const allArchives = { ...archives() }
-        const _allMoments = { ...allMoments }
         const archiveData = allArchives[archiveId]
         const momentIds = archiveData.momentsIds
 
         for (const momentId of momentIds) {
-            console.log(momentId, 'DUDE')
-            const newMomentData = {
-                ..._allMoments[momentId],
-                archiveId: defaultArchiveId,
-            }
-            _allMoments[momentId] = newMomentData
+            setAllMoments(momentId, 'archiveId', defaultArchiveId)
         }
 
         delete allArchives[archiveId]
 
         setArchives(allArchives)
-        setAllMoments(_allMoments)
     })
 }
 
@@ -249,10 +243,11 @@ export const createMoment = (data: Omit<MomentData, 'uuid'>) => {
     const targetArchiveId = data.archiveId || defaultArchiveId
 
     batch(() => {
-        setAllMoments((prev) => ({
-            ...prev,
-            [newMomentId]: newMoment,
-        }))
+        data.tagIds.forEach((id) => {
+            if (allTags[id]) setAllTags(id, 'refCount', (v) => v + 1)
+        })
+
+        setAllMoments(newMomentId, newMoment)
 
         setArchives((prev) => {
             const targetArchiveData = prev[targetArchiveId]
@@ -279,41 +274,72 @@ export const createMoment = (data: Omit<MomentData, 'uuid'>) => {
 
 export const updateMoment = (
     momentId: MomentId,
-    data: Partial<Omit<MomentData, 'uuid'>>,
+    changes: Partial<Omit<MomentData, 'uuid'>>,
 ) => {
-    setAllMoments((prev) => ({
-        ...prev,
-        [momentId]: {
-            ...prev[momentId],
-            ...data,
-        },
-    }))
+    const oldMoment = allMoments[momentId]
+    const newTagIds = changes.tagIds
+    if (!oldMoment) return
+
+    batch(() => {
+        if (newTagIds) {
+            const oldIds = oldMoment.tagIds
+
+            const removed = oldIds.filter((id) => !newTagIds.includes(id))
+            const added = newTagIds.filter((id) => !oldIds.includes(id))
+
+            removed.forEach((id) => {
+                if (!allTags[id]) return
+                const newCount = allTags[id].refCount - 1
+                if (newCount <= 0) {
+                    setAllTags(id, undefined!)
+                } else {
+                    setAllTags(id, 'refCount', newCount)
+                }
+            })
+
+            added.forEach((id) => {
+                if (!allTags[id]) return
+                // increase ref count. used for auto tag deletion
+                setAllTags(id, 'refCount', (v) => v + 1)
+            })
+        }
+        setAllMoments(momentId, changes)
+    })
+
     return true
 }
 
 export const deleteMoment = (uuid: MomentId) => {
-    const moment = allMoments[uuid]
-    if (!moment) {
+    const momentToDelete = allMoments[uuid]
+    if (!momentToDelete) {
         console.warn('Moment does not exist! Cannot delete.')
         return
     }
+    console.log(`To delete: ${uuid}`)
     const archiveId = allMoments[uuid].archiveId
 
-    setAllMoments((prev) => {
-        const result = { ...prev }
-        delete result[uuid]
-        return result
-    })
+    setAllMoments(uuid, undefined!)
 
     setArchives((prev) => {
         const result = { ...prev }
-        if (archiveId) {
+        if (archiveId && archiveId != defaultArchiveId && result[archiveId]) {
             result[archiveId].momentsIds = result[archiveId].momentsIds.filter(
                 (momentId) => momentId != uuid,
             )
         }
         return result
     })
+
+    // Delete tags that are no longer attached to any moments
+    for (const id of momentToDelete.tagIds) {
+        const newCount = allTags[id].refCount - 1
+        if (newCount <= 0) {
+            console.log('Deleting:', allTags[id].name)
+            setAllTags(id, undefined!)
+        } else {
+            setAllTags(id, 'refCount', newCount)
+        }
+    }
 
     return true
 }
@@ -332,16 +358,12 @@ export const registerTags = (newTags: Array<string>): Array<TagId> => {
     const resultIds: Array<TagId> = []
 
     batch(() => {
-        const currentTags = tags()
-
         const nameIdMap = new Map(
-            Object.values(currentTags).map((tagData) => [
+            Object.values(unwrap(allTags)).map((tagData) => [
                 tagData.name, // key
                 tagData.id, // value
             ]),
         )
-
-        const updatedTags: Tags = { ...currentTags }
 
         transformedNames.forEach((name) => {
             const alreadyExistingTagId = nameIdMap.get(name)
@@ -354,31 +376,24 @@ export const registerTags = (newTags: Array<string>): Array<TagId> => {
                 name,
                 id: newTagId,
                 colour: generateVibrantColour(),
+                refCount: 0,
             }
             resultIds.push(newTagId)
-            updatedTags[newTagId] = tagData
+            setAllTags(newTagId, tagData)
         })
-
-        setTags(updatedTags)
     })
 
     return resultIds
 }
 
 export const updateTag = (tagId: TagId, changes: Partial<Omit<Tag, 'id'>>) => {
-    const allTags = tags()
-
     if (!allTags[tagId]) {
         console.warn('Tried to rename non-existing tag.')
         return
     }
 
-    setTags({
-        ...allTags,
-        [tagId]: {
-            ...allTags[tagId],
-            ...changes,
-        },
+    setAllTags(tagId, {
+        ...changes,
     })
 
     return true

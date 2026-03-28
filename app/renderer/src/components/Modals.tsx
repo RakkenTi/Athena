@@ -1,6 +1,9 @@
+import { deleteMoment } from '../modules/data'
 import {
     displayedModal,
+    momentToDelete,
     setDisplayedModal,
+    setMomentToDelete,
     type MODAL_NAMES,
 } from '../modules/globals'
 import ConfirmModal from './ConfirmModal'
@@ -21,8 +24,16 @@ export const Modals = () => (
                 content: (
                     <ConfirmModal
                         title="Delete Moment?"
-                        rejectCallback={() => console.log('Rejected')}
-                        acceptCallback={() => console.log('Accepted')}
+                        rejectCallback={() => setMomentToDelete()}
+                        acceptCallback={() => {
+                            const targetMomentId = momentToDelete()
+                            if (targetMomentId) {
+                                console.log(
+                                    `Attempting to delete ${targetMomentId}`,
+                                )
+                                deleteMoment(targetMomentId)
+                            }
+                        }}
                     />
                 ),
             },

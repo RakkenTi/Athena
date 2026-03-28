@@ -10,14 +10,14 @@ import {
 import { Line } from './Line'
 import {
     allMoments,
+    allTags,
     archives,
     createMoment,
     defaultArchiveName,
     registerTags,
     saveFileReference,
     selectedArchiveId,
-    setAllMoments,
-    tags,
+    updateMoment,
     type ArchiveId,
     type Tag,
 } from '../modules/data'
@@ -44,7 +44,6 @@ export const MomentCreator: Component<
 
     const getSuggestableTags = createMemo(() => {
         // retrieve
-        const allTags = tags()
         const currentTypedTags = tagsString()
             .split(',')
             .map((tag) => tag.toUpperCase().trim())
@@ -100,12 +99,11 @@ export const MomentCreator: Component<
         const targetMomentId = editingMoment()
         const targetMomentData = targetMomentId && allMoments[targetMomentId]
         if (!targetMomentData) return
-        setAllMoments(targetMomentId, (prev) => ({
-            ...prev,
+        updateMoment(targetMomentId, {
             title: title(),
             content: content(),
             tagIds: saveTags(),
-        }))
+        })
     }
 
     const attemptSubmit = () => {
