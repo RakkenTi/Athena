@@ -4,6 +4,7 @@ import type { IpcApi } from '../../../main/src/types/APISchema'
 import { content, generateVibrantColour, setContent } from './globals'
 import { version } from '../../../../package.json'
 import { createStore, unwrap } from 'solid-js/store'
+import { migrateOldData } from './data_migrate'
 
 // Constants
 export const BeginningOfTime = new Date()
@@ -90,7 +91,8 @@ let isLoaded = false
 const loadData = async () => {
     isLoaded = false
 
-    const readData = await getApi().readData()
+    const migratedData = await migrateOldData()
+    const readData = migratedData || (await getApi().readData())
 
     console.log(log_header)
     console.log('Loading data:', readData)

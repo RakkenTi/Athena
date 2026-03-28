@@ -21,7 +21,7 @@ export interface ModalContainerData<
 const ModalContainer = <T extends string>(props: ModalContainerData<T>) => (
     <div
         onclick={() => props.stateSetter('NONE' as any)}
-        class={`fixed inset-0 z-10 flex w-full items-center justify-center bg-black/40 backdrop-blur-xs transition-all duration-500 ${
+        class={`fixed inset-0 z-1000 flex w-full items-center justify-center bg-black/40 backdrop-blur-xs transition-all duration-500 ${
             props.state() === 'NONE'
                 ? 'pointer-events-none opacity-0'
                 : 'pointer-events-auto opacity-100'

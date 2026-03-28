@@ -9,9 +9,9 @@ import { uriPrefix } from './Session'
 
 const getDataPath = () => {
     if (process.env.DEV) {
-        return path.join(app.getPath('userData'), 'dev_monents_data.json')
+        return path.join(app.getPath('userData'), 'dev_athena_data.json')
     } else {
-        return path.join(app.getPath('userData'), 'monents_data.json')
+        return path.join(app.getPath('userData'), 'athena_data.json')
     }
 }
 
