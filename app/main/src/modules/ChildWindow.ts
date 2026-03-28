@@ -2,13 +2,15 @@ import { BrowserWindow } from 'electron'
 import { BrowserWindowOptions } from './Window'
 
 export const SetChildWindowProperties = (window: BrowserWindow) => {
-    window.webContents.setWindowOpenHandler(({ url }) => {
+    window.webContents.setWindowOpenHandler(() => {
         return {
             action: 'allow',
             overrideBrowserWindowOptions: (() => {
-                const options = { ...BrowserWindowOptions }
-                options.frame = true
-                return options
+                return {
+                    ...BrowserWindowOptions,
+                    frame: true,
+                    titleBarStyle: 'default',
+                }
             })(),
         }
     })

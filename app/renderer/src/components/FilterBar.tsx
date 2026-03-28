@@ -1,6 +1,6 @@
 import { createMemo, For, type Component } from 'solid-js'
-import { InputFrame } from '../barebone/InputFrame'
-import { Line } from '../barebone/Line'
+import { InputFrame } from './InputFrame'
+import { Line } from './Line'
 import { ClearFilterButton } from './ClearFilterButton'
 import {
     availableURLFiltersAndNicknames,
@@ -10,7 +10,7 @@ import {
     selectedURLFilters,
     setDateFilter,
     setSelectedURLFilters,
-} from '../../modules/data'
+} from '../modules/data'
 
 export const FilterBar: Component = () => {
     const updateFilter = (

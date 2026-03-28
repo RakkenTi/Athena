@@ -1,4 +1,4 @@
-export interface scrapeData {
+export interface ScrapeData {
     title: string
     description: string
     siteLink: string
@@ -11,8 +11,14 @@ export const IpcApi = {
     openExternalBrowser: async (_: string) => undefined,
     // Add read/write methods
     readData: () => new Promise(() => {}) as any,
-    writeData: (_: any) => {},
-    scrapeWebsiteData: async (_: string) => ({}) as scrapeData,
+    writeMainData: (_: any) => {},
+    scrapeWebsiteData: async (_: string, __?: boolean) => ({}) as ScrapeData,
+    openFileFromURI: (uri: string) => {},
+    getFileNameFromURI: (uri: string) => '',
+    saveFileRef: async (
+        _: ArrayBuffer,
+        __: string,
+    ): Promise<string | undefined> => '',
 }
 
 export type IPC_API = typeof IpcApi

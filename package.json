@@ -1,7 +1,7 @@
 {
     "name": "athena",
     "productName": "Athena",
-    "version": "0.3.1",
+    "version": "0.4.0",
     "description": "A simple app to store your moments in archives. Featuring a special filtering system to easily find what you need.",
     "main": "app/entry.mjs",
     "private": true,
@@ -12,7 +12,7 @@
         "build:norenderer": "npm run build -w @app/main && npm run build -w @app/preload",
         "dev:main": "npm run build:norenderer && cross-env DEV=true npx electron app/entry.mjs",
         "dev:renderer": "npm run dev -w @app/renderer",
-        "dev:watch": "nodemon --watch app/main/src --exec \"npm run dev:main\"",
+        "dev:watch": "nodemon --watch app/main/src -e ts,js,json --exec \"npm run dev:main\"",
         "dev": "npm install && node app/dev.mjs",
         "start": "npm install && electron-forge start",
         "package": "npm install && npm run build:all && electron-forge package",
@@ -21,7 +21,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "Moment"
+        "url": "https://github.com/RakkenTi/Athena"
     },
     "author": "Mark Martinez",
     "license": "MIT",
@@ -43,7 +43,8 @@
     },
     "dependencies": {
         "@app/main": "*",
-        "electron-squirrel-startup": "^1.0.1"
+        "electron-squirrel-startup": "^1.0.1",
+        "update-electron-app": "^3.1.2"
     },
     "workspaces": [
         "app/*"

@@ -15,7 +15,8 @@ export const BrowserWindowOptions: Electron.BrowserWindowConstructorOptions = {
         color: '#00000000',
         symbolColor: '#94a3b8',
     },
-    icon: join(__dirname, '../../../../assets/icon.png'),
+    autoHideMenuBar: true,
+    icon: join(__dirname, '../../../assets/icon.png'),
 }
 
 export const CreateWindow = async () => {
@@ -64,6 +65,7 @@ export const CreateWindow = async () => {
         )
         window.loadFile(path)
     }
+
     SetChildWindowProperties(window)
     console.log('Created window!')
 }

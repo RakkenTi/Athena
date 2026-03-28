@@ -1,7 +1,10 @@
-import { createEffect, createRoot, createSignal } from 'solid-js'
-import type { Moment } from '../components/complete/Moment'
+import { batch, createEffect, createRoot, createSignal } from 'solid-js'
 import { getApi } from './ipc_client'
 import type { IpcApi } from '../../../main/src/types/APISchema'
+import { content, generateVibrantColour, setContent } from './globals'
+import { version } from '../../../../package.json'
+import { createStore, unwrap } from 'solid-js/store'
+import { migrateOldData } from './data_migrate'
 
 // Constants
 export const BeginningOfTime = new Date()
@@ -12,32 +15,59 @@ EndOfTime.setUTCFullYear(9999)
 
 const log_header = '-'.repeat(25)
 
+// Reference Files
+export type FileName = string
+export type FileRefs = Record<string, File>
+export const [refFiles, setRefFiles] = createSignal<FileRefs>({})
+
 // Link Previews
 // url: metadata
 export const [linkPreviewCache, setLinkPreviewCache] = createSignal<
     Record<string, Awaited<ReturnType<typeof IpcApi.scrapeWebsiteData>>>
 >({})
 
+// Moments
+export interface MomentData {
+    uuid: MomentId
+    title: string
+    content: string
+    archiveId: ArchiveId | undefined
+    timestamp: Date
+    tagIds: Array<TagId>
+}
+export type MomentId = `moment_${string}`
+export const [allMoments, setAllMoments] = createStore<
+    Record<MomentId, MomentData>
+>({})
+
 // Archives
-export const [archives, setArchives] = createSignal<Array<string>>([])
-export const [selectedArchive, setSelectedArchive] = createSignal<
-    string | undefined
->(undefined)
+export const defaultArchiveId = '_default_archive_' as ArchiveId
+export const defaultArchiveName = 'GENERAL'
+export type ArchiveId = `archive_${string}`
+export interface Archive {
+    uuid: ArchiveId
+    name: string
+    momentsIds: Array<MomentId>
+}
+export const [archives, setArchives] = createSignal<Record<ArchiveId, Archive>>(
+    {},
+) // archiveName: Moment ID array
+export const [selectedArchiveId, setSelectedArchive] =
+    createSignal<ArchiveId>(defaultArchiveId)
 
 // Tags
-export const [tagColours, setTagColours] = createSignal<Record<string, string>>(
-    {},
-)
-export const [tags, setTags] = createSignal<Array<string>>([])
-export const [selectedTags, setSelectedTags] = createSignal<Array<string>>([])
-
-// Feed
-export const [title, setTitle] = createSignal<string>('')
-export const [content, setContent] = createSignal<string>('')
-export const [tagsString, setTagsString] = createSignal<string>('')
-export const [allMoments, setAllMoments] = createSignal<Array<Moment>>([])
-
-export const defaultArchive = 'GENERAL'
+export type Tags = Record<TagId, Tag>
+export type TagId = `tag_${string}`
+export interface Tag {
+    id: TagId
+    name: string
+    colour: string
+    refCount: number
+}
+export const [allTags, setAllTags] = createStore<Record<TagId, Tag>>({}) // tag_id: tag
+export const [selectedTagIds, setSelectedTagIds] = createSignal<Array<TagId>>(
+    [],
+) // tag id
 
 // Filters
 export const [dateFilter, setDateFilter] = createSignal<{
@@ -61,7 +91,8 @@ let isLoaded = false
 const loadData = async () => {
     isLoaded = false
 
-    const readData = await getApi().readData()
+    const migratedData = await migrateOldData()
+    const readData = migratedData || (await getApi().readData())
 
     console.log(log_header)
     console.log('Loading data:', readData)
@@ -82,25 +113,18 @@ const loadData = async () => {
 
     // Important to load tags before moments as moments depend on tags
     if (readData.tags) {
-        setTags([...readData.tags])
+        setAllTags(readData.tags)
         console.log('Loaded tags.')
     } else {
         console.error('No tags!')
     }
 
-    if (readData.tagColours) {
-        setTagColours(readData.tagColours)
-        console.log('Loaded tag colours.')
-    } else {
-        console.error('No tag colours!')
-    }
-
     if (readData.moments) {
-        const rawMoments = readData.moments as Array<Moment>
-        const moments = []
-        for (const moment of rawMoments) {
+        const rawMoments = readData.moments as Record<string, MomentData>
+        const moments = {} as Record<string, MomentData>
+        for (const [id, moment] of Object.entries(rawMoments)) {
             moment.timestamp = new Date(new Date(moment.timestamp).getTime())
-            moments.push(moment)
+            moments[id] = moment
         }
         console.log('Loaded moments.')
         setAllMoments(moments)
@@ -113,9 +137,7 @@ const loadData = async () => {
     console.log(log_header)
 }
 
-if (!import.meta.env.DEV) {
-    loadData()
-}
+loadData()
 
 // Saving
 const createDebounce = (callback: Function, timeoutDuration: number) => {
@@ -132,25 +154,25 @@ const createDebounce = (callback: Function, timeoutDuration: number) => {
 }
 
 export interface dataSnapshot {
+    version: string
     archives: ReturnType<typeof archives>
-    moments: ReturnType<typeof allMoments>
-    tags: ReturnType<typeof tags>
-    tagColours: ReturnType<typeof tagColours>
+    moments: typeof allMoments
+    tags: typeof allTags
     linkPreviewCache: ReturnType<typeof linkPreviewCache>
 }
 
 const writeSave = createDebounce((snapshot: dataSnapshot) => {
-    getApi().writeData(snapshot)
+    getApi().writeMainData(snapshot)
     console.log('Saved Data!')
 }, 250)
 
 createRoot(() => {
     createEffect(() => {
         const snapshot: dataSnapshot = {
+            version,
             archives: archives(),
-            moments: allMoments(),
-            tags: tags(),
-            tagColours: tagColours(),
+            moments: unwrap(allMoments),
+            tags: unwrap(allTags),
             linkPreviewCache: linkPreviewCache(),
         }
 
@@ -159,3 +181,275 @@ createRoot(() => {
         writeSave(snapshot)
     })
 })
+
+// Data operations
+// Archives
+export const createArchive = (archiveName: string) => {
+    const allArchives = { ...archives() }
+    for (const [_, archiveData] of Object.entries(allArchives)) {
+        if (archiveName == archiveData.name) {
+            return
+        }
+    }
+    const newArchiveId: ArchiveId = `archive_${window.crypto.randomUUID()}`
+    const newArchive: Archive = {
+        name: archiveName,
+        uuid: newArchiveId,
+        momentsIds: [],
+    }
+    allArchives[newArchiveId] = newArchive
+    setArchives(allArchives)
+    return true
+}
+
+export const updateArchive = (
+    archiveId: ArchiveId,
+    changes: Partial<Omit<Archive, 'uuid'>>,
+) => {
+    setArchives((prev) => ({
+        ...prev,
+        [archiveId]: {
+            ...prev[archiveId],
+            ...changes,
+        },
+    }))
+}
+
+export const deleteArchive = (archiveId: ArchiveId) => {
+    batch(() => {
+        if (selectedArchiveId() == archiveId) {
+            setSelectedArchive(defaultArchiveId)
+        }
+
+        const allArchives = { ...archives() }
+        const archiveData = allArchives[archiveId]
+        const momentIds = archiveData.momentsIds
+
+        for (const momentId of momentIds) {
+            setAllMoments(momentId, 'archiveId', defaultArchiveId)
+        }
+
+        delete allArchives[archiveId]
+
+        setArchives(allArchives)
+    })
+}
+
+// Moments
+export const createMoment = (data: Omit<MomentData, 'uuid'>) => {
+    const newMomentId: MomentId = `moment_${window.crypto.randomUUID()}`
+    const newMoment: MomentData = {
+        ...data,
+        uuid: newMomentId,
+    }
+    const targetArchiveId = data.archiveId || defaultArchiveId
+
+    batch(() => {
+        data.tagIds.forEach((id) => {
+            if (allTags[id]) setAllTags(id, 'refCount', (v) => v + 1)
+        })
+
+        setAllMoments(newMomentId, newMoment)
+
+        setArchives((prev) => {
+            const targetArchiveData = prev[targetArchiveId]
+            if (targetArchiveId == defaultArchiveId) {
+                return prev
+            }
+
+            const newMomentIds = [
+                ...(targetArchiveData?.momentsIds || []),
+                newMomentId,
+            ]
+
+            return {
+                ...prev,
+                [targetArchiveId]: {
+                    ...targetArchiveData,
+                    momentsIds: newMomentIds,
+                },
+            }
+        })
+    })
+    return true
+}
+
+export const updateMoment = (
+    momentId: MomentId,
+    changes: Partial<Omit<MomentData, 'uuid'>>,
+) => {
+    const oldMoment = allMoments[momentId]
+    const newTagIds = changes.tagIds
+    if (!oldMoment) return
+
+    batch(() => {
+        if (newTagIds) {
+            const oldIds = oldMoment.tagIds
+
+            const removed = oldIds.filter((id) => !newTagIds.includes(id))
+            const added = newTagIds.filter((id) => !oldIds.includes(id))
+
+            removed.forEach((id) => {
+                if (!allTags[id]) return
+                const newCount = allTags[id].refCount - 1
+                if (newCount <= 0) {
+                    setAllTags(id, undefined!)
+                } else {
+                    setAllTags(id, 'refCount', newCount)
+                }
+            })
+
+            added.forEach((id) => {
+                if (!allTags[id]) return
+                // increase ref count. used for auto tag deletion
+                setAllTags(id, 'refCount', (v) => v + 1)
+            })
+        }
+        setAllMoments(momentId, changes)
+    })
+
+    return true
+}
+
+export const deleteMoment = (uuid: MomentId) => {
+    const momentToDelete = allMoments[uuid]
+    if (!momentToDelete) {
+        console.warn('Moment does not exist! Cannot delete.')
+        return
+    }
+    console.log(`To delete: ${uuid}`)
+    const archiveId = allMoments[uuid].archiveId
+
+    setAllMoments(uuid, undefined!)
+
+    setArchives((prev) => {
+        const result = { ...prev }
+        if (archiveId && archiveId != defaultArchiveId && result[archiveId]) {
+            result[archiveId].momentsIds = result[archiveId].momentsIds.filter(
+                (momentId) => momentId != uuid,
+            )
+        }
+        return result
+    })
+
+    // Delete tags that are no longer attached to any moments
+    for (const id of momentToDelete.tagIds) {
+        const newCount = allTags[id].refCount - 1
+        if (newCount <= 0) {
+            console.log('Deleting:', allTags[id].name)
+            setAllTags(id, undefined!)
+        } else {
+            setAllTags(id, 'refCount', newCount)
+        }
+    }
+
+    return true
+}
+
+// Tags
+export const registerTags = (newTags: Array<string>): Array<TagId> => {
+    // removes duplicate entries
+    const transformedNames = new Array(
+        ...new Set(
+            newTags
+                .map((tagName) => tagName.toUpperCase().trim())
+                .filter((name) => name.length > 0),
+        ),
+    )
+
+    const resultIds: Array<TagId> = []
+
+    batch(() => {
+        const nameIdMap = new Map(
+            Object.values(unwrap(allTags)).map((tagData) => [
+                tagData.name, // key
+                tagData.id, // value
+            ]),
+        )
+
+        transformedNames.forEach((name) => {
+            const alreadyExistingTagId = nameIdMap.get(name)
+            if (alreadyExistingTagId) {
+                resultIds.push(alreadyExistingTagId)
+                return
+            }
+            const newTagId: TagId = `tag_${window.crypto.randomUUID()}`
+            const tagData: Tag = {
+                name,
+                id: newTagId,
+                colour: generateVibrantColour(),
+                refCount: 0,
+            }
+            resultIds.push(newTagId)
+            setAllTags(newTagId, tagData)
+        })
+    })
+
+    return resultIds
+}
+
+export const updateTag = (tagId: TagId, changes: Partial<Omit<Tag, 'id'>>) => {
+    if (!allTags[tagId]) {
+        console.warn('Tried to rename non-existing tag.')
+        return
+    }
+
+    setAllTags(tagId, {
+        ...changes,
+    })
+
+    return true
+}
+
+export const renameTag = (tagId: TagId, newTagName: string) => {
+    updateTag(tagId, {
+        name: newTagName,
+    })
+
+    return true
+}
+
+export const recolourTag = (tagId: TagId, newTagColour: string) => {
+    updateTag(tagId, {
+        colour: newTagColour,
+    })
+
+    return true
+}
+
+// File References
+export const saveFileReference = async (
+    file: File,
+    selection: {
+        Start?: number
+        End?: number
+    },
+) => {
+    const currentDate = new Date().getTime()
+    const fileName = `attachment_${file.name || currentDate}`
+    const placeholder = `[Attaching ${fileName}...]`
+
+    const startPos = selection.Start ?? content().length
+    const endPos = selection.End ?? content().length
+
+    setContent(
+        (prev) =>
+            prev.substring(0, startPos) + placeholder + prev.substring(endPos),
+    )
+
+    try {
+        const rawData = await file.arrayBuffer()
+        const localUri = await getApi().saveFileRef(rawData, fileName)
+
+        if (localUri) {
+            setContent((prev) => prev.replace(placeholder, `${localUri} `))
+            setRefFiles((prev) => ({ ...prev, [localUri]: file }))
+        }
+    } catch (error) {
+        console.error(`Failed to attach a file!: `, error)
+        setContent((prev) =>
+            prev.replace(placeholder, `[ERROR! Failed to attach ${fileName}]`),
+        )
+        return null
+    }
+}

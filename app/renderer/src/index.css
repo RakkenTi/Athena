@@ -1,21 +1,25 @@
 @import 'tailwindcss';
 
 @theme {
+    --color-element-matte: var(--color-slate-950);
     --color-element: color-mix(in srgb, var(--color-slate-950) 50%, transparent);
     --color-dark: var(--color-slate-800);
     --color-element-lighter: color-mix(in srgb, var(--color-slate-900) 30%, transparent);
     --color-element-accent-highlight: var(--color-slate-500);
+    --color-highlight-matte: var(--color-cyan-500);
     --color-highlight: color-mix(in srgb, var(--color-cyan-500) 20%, transparent);
     --color-highlight-strong: color-mix(in srgb, var(--color-cyan-500) 80%, transparent);
     --color-highlight-strongest: color-mix(in srgb, var(--color-cyan-500) 100%, transparent);
     --color-highlight-alt: color-mix(in srgb, var(--color-pink-500) 20%, transparent);
     --color-highlight-alt-strong: color-mix(in srgb, var(--color-pink-500) 80%, transparent);
-    --color-highlight-alt-strongest: color-mix(in srgb, var(--color-pink-500) 10%, transparent);
+    --color-highlight-alt-strongest: color-mix(in srgb, var(--color-pink-500) 100%, transparent);
     --color-background: var(--color-slate-900);
     --color-main: var(--color-slate-300);
     --color-sub: var(--color-slate-500);
     --color-element-accent: var(--color-slate-800);
-    --color-danger: var(--color-red-400);
+    --color-danger: var(--color-red-500);
+    --color-success: var(--color-green-500);
+    --color-plain: var(--color-white);
 }
 
  ::-webkit-scrollbar {

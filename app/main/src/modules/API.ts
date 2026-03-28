@@ -1,15 +1,22 @@
-import type { IPC_API, scrapeData } from '../types/APISchema' // Import the interface
+import type { IPC_API, ScrapeData } from '../types/APISchema'
 import { app, BrowserWindow, shell } from 'electron'
 import * as cheerio from 'cheerio'
 import * as fs from 'node:fs'
 import * as path from 'path'
 import { ELECTRON_AGENT_REGEX } from '@app/renderer/src/modules/regex'
+import { FileName, type dataSnapshot } from '@app/renderer/src/modules/data'
+import { uriPrefix } from './Session'
+
+const prodDataFileName = 'athena_data.json'
+const devDataFileName = 'dev_athena_data.json'
+const devDataFilePath = path.join(app.getPath('userData'), devDataFileName)
+const prodDataFilePath = path.join(app.getPath('userData'), prodDataFileName)
 
 const getDataPath = () => {
     if (process.env.DEV) {
-        return path.join(app.getPath('userData'), 'dev_monents_data.json')
+        return devDataFilePath
     } else {
-        return path.join(app.getPath('userData'), 'monents_data.json')
+        return prodDataFilePath
     }
 }
 
@@ -25,7 +32,7 @@ class PrefixLogger {
     }
 }
 
-const sessionCache: Record<string, Promise<scrapeData>> = {}
+const sessionCache: Record<string, Promise<ScrapeData>> = {}
 
 const getContent = (targetKeywords: Array<string>, c: cheerio.CheerioAPI) => {
     for (const keyword of targetKeywords) {
@@ -43,6 +50,21 @@ const getContent = (targetKeywords: Array<string>, c: cheerio.CheerioAPI) => {
     return ''
 }
 
+export const attemptMigrateFile = () => {
+    try {
+        // old file name is monents_data.json
+        const legacyPath = path.join(
+            app.getPath('userData'),
+            'monents_data.json',
+        )
+        if (fs.readFileSync(legacyPath)) {
+            fs.renameSync(legacyPath, prodDataFilePath)
+        }
+    } catch (error) {
+        console.warn('Error trying to migrate file:', error)
+    }
+}
+
 export const Api: IPC_API = {
     status: async () => {
         return 'Preload is working.'
@@ -58,11 +80,31 @@ export const Api: IPC_API = {
             return {}
         }
     },
-    writeData: (data: any) => {
+    saveFileRef: async (arrayBuffer: ArrayBuffer, fileName: FileName) => {
+        try {
+            const userDataPath = app.getPath('userData')
+            const attachmentsDir = path.join(userDataPath, 'attachments')
+
+            if (!fs.existsSync(attachmentsDir)) {
+                fs.mkdirSync(attachmentsDir, { recursive: true })
+            }
+
+            const safeName = fileName.replace(/[^a-z0-9.]/gi, '_').toLowerCase()
+            const uniqueFileName = `${new Date().getTime()}_${safeName}`
+            const filePath = path.join(attachmentsDir, uniqueFileName)
+
+            fs.writeFileSync(filePath, Buffer.from(arrayBuffer))
+
+            return `athena://${uniqueFileName}`
+        } catch (error) {
+            console.error(`Failed to save attachment for ${fileName}`, error)
+        }
+    },
+    writeMainData: (mainData: dataSnapshot) => {
         try {
             const targetPath = getDataPath()
             const bufferPath = targetPath + '.tmp'
-            const formattedData = JSON.stringify(data)
+            const formattedData = JSON.stringify(mainData, null, 2)
 
             fs.writeFileSync(bufferPath, formattedData, 'utf-8')
             fs.renameSync(bufferPath, targetPath)
@@ -70,16 +112,40 @@ export const Api: IPC_API = {
             console.error('Failed to save moments data:', error)
         }
     },
-    scrapeWebsiteData: async (url: string) => {
+    openFileFromURI: (uri: string) => {
+        try {
+            const appData = app.getPath('userData')
+            const relativeFilePath = uri.slice(uriPrefix.length)
+            const fullFilePath = path.join(
+                appData,
+                'attachments',
+                relativeFilePath,
+            )
+            shell.openPath(fullFilePath)
+        } catch (error) {
+            console.warn(`Failed to open file from uri (${uri}): ${error}`)
+        }
+    },
+    getFileNameFromURI: (uri: string) => {
+        try {
+            const relativeFilePath = uri.slice(uriPrefix.length)
+            const match = relativeFilePath.match(/.+attachment_(.*)/)
+            return match ? match[1] : 'File'
+        } catch (error) {
+            console.warn(`Failed to open file from uri (${uri}): ${error}`)
+            return 'File'
+        }
+    },
+    scrapeWebsiteData: async (url: string, force?: boolean) => {
         url = new URL(url).href
-        if (sessionCache[url] != undefined) {
-            console.log(`Found cached data for ${url}. Skipping scraping.`)
+        const logger = new PrefixLogger(url)
+        if (sessionCache[url] != undefined && force != true) {
+            logger.log(`Found cached data for ${url}. Skipping scraping.`)
             return await sessionCache[url]
         }
 
-        const scrapePromise = (async () => {
+        const scrapePromise = (async (): Promise<ScrapeData> => {
             try {
-                const logger = new PrefixLogger(url)
                 logger.log(`Attempting to scrape ${url}`)
                 let targetURL: string = url
                 let UserAgent = navigator.userAgent.replace(
@@ -116,6 +182,20 @@ export const Api: IPC_API = {
 
                     if (response.ok) {
                         const tempHTML = await response.text()
+                        const isImage = response.headers
+                            .get('content-type')
+                            ?.match('image')
+
+                        if (isImage) {
+                            logger.log('Is direct image! Returning.')
+                            return {
+                                title: targetURL.trim(),
+                                description: 'Image',
+                                siteLink: targetURL.trim(),
+                                image: url,
+                                video: '',
+                            } as ScrapeData
+                        }
 
                         // Must check to see if it even has data.
                         const _$ = cheerio.load(tempHTML)
@@ -226,7 +306,7 @@ export const Api: IPC_API = {
                     siteLink: siteLink.trim(),
                     image,
                     video,
-                }
+                } as ScrapeData
 
                 return data
             } catch (error) {
