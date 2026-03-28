@@ -70,3 +70,5 @@ jobs:
             out/make/**/*.rpm
             out/make/**/*.deb
             out/make/**/*.zip
+            out/make/**/*.nupkg
+            out/make/**/*RELEASES
