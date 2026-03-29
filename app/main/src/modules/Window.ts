@@ -19,7 +19,7 @@ export const BrowserWindowOptions: Electron.BrowserWindowConstructorOptions = {
     icon: join(__dirname, '../../../assets/icon.png'),
 }
 
-export const CreateWindow = async () => {
+export const CreateMainWindow = async () => {
     const preloadPath = join(
         __dirname,
         '../',

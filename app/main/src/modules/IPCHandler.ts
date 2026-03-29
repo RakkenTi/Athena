@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { Api } from './API'
 
-export const handleApi = () => {
+export const setupApi = () => {
     const entries = Object.entries(Api) as Array<
         [string, (...args: any[]) => any]
     >

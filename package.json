@@ -10,7 +10,7 @@
         "create:renderer": "node scripts/renderer/create_renderer.mjs",
         "build:all": "npm run build -w @app/main && npm run build -w @app/preload && npm run build -w @app/renderer",
         "build:norenderer": "npm run build -w @app/main && npm run build -w @app/preload",
-        "dev:main": "npm run build:norenderer && cross-env DEV=true npx electron app/entry.mjs",
+        "dev:main": "npm run build:norenderer && cross-env DEV=true electron app/entry.mjs",
         "dev:renderer": "npm run dev -w @app/renderer",
         "dev:watch": "nodemon --watch app/main/src -e ts,js,json --exec \"npm run dev:main\"",
         "dev": "npm install && node app/dev.mjs",

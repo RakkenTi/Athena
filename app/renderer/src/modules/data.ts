@@ -157,6 +157,9 @@ const createDebounce = (callback: Function, timeoutDuration: number) => {
     }
 }
 
+// Data saving
+let lastSavedString = ''
+
 export interface dataSnapshot {
     version: string
     archives: ReturnType<typeof archives>
@@ -172,6 +175,9 @@ const writeSave = createDebounce((snapshot: dataSnapshot) => {
 
 createRoot(() => {
     createEffect(() => {
+        JSON.stringify(allMoments)
+        JSON.stringify(allTags)
+        if (!isLoaded) return
         const snapshot: dataSnapshot = {
             version,
             archives: archives(),
@@ -180,8 +186,11 @@ createRoot(() => {
             linkPreviewCache: linkPreviewCache(),
         }
 
-        if (!isLoaded) return
+        const savedDataString = JSON.stringify(snapshot)
+
         console.log('Snapshot to save:', snapshot)
+        if (lastSavedString == savedDataString) return
+        lastSavedString = savedDataString
         writeSave(snapshot)
     })
 })

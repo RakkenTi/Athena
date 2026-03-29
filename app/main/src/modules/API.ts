@@ -6,18 +6,31 @@ import * as path from 'path'
 import { ELECTRON_AGENT_REGEX } from '@app/renderer/src/modules/regex'
 import { FileName, type dataSnapshot } from '@app/renderer/src/modules/data'
 import { uriPrefix } from './Session'
+import { MAX_BACKUP_COUNT, MAX_BACKUP_SIZE_IN_MB } from './Settings'
 
+const backupsFolderName = 'backups'
 const devDataFileName = 'dev_athena_data.json'
 const prodDataFileName = 'athena_data.json'
-const devDataFilePath = path.join(app.getPath('userData'), devDataFileName)
-const prodDataFilePath = path.join(app.getPath('userData'), prodDataFileName)
+const devDataFilePath = () =>
+    path.join(app.getPath('userData'), devDataFileName)
+const prodDataFilePath = () =>
+    path.join(app.getPath('userData'), prodDataFileName)
+const backupsFolderPath = () =>
+    path.join(app.getPath('userData'), backupsFolderName)
 
 const getDataPath = () => {
     if (process.env.DEV) {
-        return devDataFilePath
+        return devDataFilePath()
     } else {
-        return prodDataFilePath
+        return prodDataFilePath()
     }
+}
+
+const formatDate = (date: Date) => {
+    const year = date.getFullYear()
+    const month = `${date.getMonth()}`.padStart(2, '0')
+    const day = `${date.getDate()}`.padStart(2, '0')
+    return `${year}-${month}-${day}`
 }
 
 class PrefixLogger {
@@ -33,6 +46,60 @@ class PrefixLogger {
 }
 
 const sessionCache: Record<string, Promise<ScrapeData>> = {}
+
+const saveBackup = () => {
+    try {
+        if (!fs.existsSync(backupsFolderPath())) {
+            fs.mkdirSync(backupsFolderPath(), { recursive: true })
+        }
+
+        const date = new Date()
+        const time = date.getTime()
+        date.setUTCHours(0, 0, 0, 0)
+        const formattedDate = formatDate(date)
+
+        const backupFilePath = path.join(
+            backupsFolderPath(),
+            `athena_${formattedDate}-${time}.json`,
+        )
+
+        fs.copyFileSync(getDataPath(), backupFilePath)
+        checkBackupLimits()
+    } catch (error) {
+        console.error('Could not write backup. Encountered error!:', error)
+    }
+}
+
+const checkBackupLimits = async () => {
+    let backupFiles = fs.readdirSync(backupsFolderPath())
+    let backupStats = backupFiles.map((file) => {
+        const fullPath = path.join(backupsFolderPath(), file)
+        const stats = fs.statSync(fullPath)
+        return {
+            name: file,
+            path: fullPath,
+            size: stats.size,
+            time: stats.mtimeMs,
+        }
+    })
+
+    backupStats.sort((a, b) => a.time - b.time)
+    while (backupStats.length > MAX_BACKUP_COUNT) {
+        const oldest = backupStats.shift()
+        if (oldest) fs.rmSync(oldest.path)
+    }
+
+    let totalSize = backupStats.reduce((total, file) => total + file.size, 0)
+    const maxSizeBytes = MAX_BACKUP_SIZE_IN_MB * 1024 * 1024
+
+    while (totalSize > maxSizeBytes && backupStats.length > 1) {
+        const oldest = backupStats.shift()
+        if (oldest) {
+            totalSize -= oldest.size
+            fs.rmSync(oldest.path)
+        }
+    }
+}
 
 const getContent = (targetKeywords: Array<string>, c: cheerio.CheerioAPI) => {
     for (const keyword of targetKeywords) {
@@ -57,8 +124,12 @@ export const attemptMigrateFile = () => {
             app.getPath('userData'),
             'monents_data.json',
         )
-        if (fs.readFileSync(legacyPath)) {
-            fs.renameSync(legacyPath, prodDataFilePath)
+        if (fs.existsSync(legacyPath)) {
+            fs.copyFileSync(
+                legacyPath,
+                path.join(backupsFolderPath(), 'legacy_monents_data.json'),
+            )
+            fs.renameSync(legacyPath, prodDataFilePath())
         }
     } catch (error) {
         console.warn('Error trying to migrate file:', error)
@@ -104,10 +175,14 @@ export const Api: IPC_API = {
         try {
             const targetPath = getDataPath()
             const bufferPath = targetPath + '.tmp'
+            console.log(`Attempting to save to ${targetPath}..`)
             const formattedData = JSON.stringify(mainData, null, 2)
 
             fs.writeFileSync(bufferPath, formattedData, 'utf-8')
             fs.renameSync(bufferPath, targetPath)
+            console.log('Saved! Attempting backup...')
+            saveBackup()
+            console.log('Backup complete.')
         } catch (error) {
             console.error('Failed to save moments data:', error)
         }
