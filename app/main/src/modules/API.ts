@@ -71,8 +71,8 @@ const saveBackup = () => {
 }
 
 const checkBackupLimits = async () => {
-    let backupFiles = fs.readdirSync(backupsFolderPath())
-    let backupStats = backupFiles.map((file) => {
+    const backupFiles = fs.readdirSync(backupsFolderPath())
+    const backupStats = backupFiles.map((file) => {
         const fullPath = path.join(backupsFolderPath(), file)
         const stats = fs.statSync(fullPath)
         return {
@@ -147,7 +147,7 @@ export const Api: IPC_API = {
         try {
             const raw = fs.readFileSync(getDataPath(), 'utf-8')
             return JSON.parse(raw)
-        } catch (error) {
+        } catch {
             return {}
         }
     },
@@ -368,7 +368,7 @@ export const Api: IPC_API = {
                     $,
                 )
 
-                let image = getContent(
+                const image = getContent(
                     ['twitter:image', 'og:image', 'image_src'],
                     $,
                 )

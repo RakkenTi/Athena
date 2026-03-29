@@ -144,7 +144,10 @@ const loadData = async () => {
 loadData()
 
 // Saving
-const createDebounce = (callback: Function, timeoutDuration: number) => {
+const createDebounce = (
+    callback: (...args: any) => any,
+    timeoutDuration: number,
+) => {
     let timeoutId: number | undefined
 
     return (...args: Array<any>) => {

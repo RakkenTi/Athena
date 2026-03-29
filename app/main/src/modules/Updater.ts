@@ -1,4 +1,3 @@
-import { autoUpdater } from 'electron'
 import { updateElectronApp, UpdateSourceType } from 'update-electron-app'
 
 export const startAutoUpdater = () => {

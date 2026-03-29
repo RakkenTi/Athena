@@ -10,7 +10,6 @@ import {
     setMediaFilters,
     type baseUrlString,
     type MomentData,
-    type MomentId,
     type url,
 } from './data'
 import { allTags, type Tag } from './data'
@@ -93,7 +92,7 @@ export const sortTags = (tagsToSort: Array<Tag>) => {
     })
 }
 
-export let getFilteredMoments: Accessor<Array<MomentData>> = () => {
+export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
     const momentsPool = Object.values(allMoments)
     return momentsPool
         .filter((momentData) => {
