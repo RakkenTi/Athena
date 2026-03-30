@@ -18,43 +18,58 @@ export interface ModalContainerData<
     }>
 }
 
-const ModalContainer = <T extends string>(props: ModalContainerData<T>) => (
-    <div
-        onclick={() => props.stateSetter('NONE' as any)}
-        class={`fixed inset-0 z-1000 flex w-full items-center justify-center bg-black/40 backdrop-blur-xs transition-all duration-250 ${
-            props.state() === 'NONE'
-                ? 'pointer-events-none opacity-0'
-                : 'pointer-events-auto opacity-100'
-        }`}
-    >
-        <For each={props.modals}>
-            {(item) => {
-                const isVisible = createMemo(
-                    () => props.state() === item.state_name,
-                )
-                return (
-                    <div class="absolute flex w-full items-center justify-center">
-                        <div
-                            onclick={(e) => e.stopPropagation()}
-                            class={`w-xl max-w-full transition-all duration-700 ${
-                                isVisible() ? 'opacity-100' : 'opacity-0'
-                            } `}
-                        >
+const ModalContainer = <T extends string>(props: ModalContainerData<T>) => {
+    let clickStartedOnBackground = false
+
+    const handleMouseDown = (e: MouseEvent) => {
+        clickStartedOnBackground = e.target === e.currentTarget
+    }
+
+    const handleMouseUp = (e: MouseEvent) => {
+        if (clickStartedOnBackground && e.target === e.currentTarget) {
+            props.stateSetter('NONE' as any)
+        }
+        clickStartedOnBackground = false
+    }
+    return (
+        <div
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            class={`fixed inset-0 z-1000 flex w-full items-center justify-center bg-black/40 backdrop-blur-xs transition-all duration-250 ${
+                props.state() === 'NONE'
+                    ? 'pointer-events-none opacity-0'
+                    : 'pointer-events-auto opacity-100'
+            }`}
+        >
+            <For each={props.modals}>
+                {(item) => {
+                    const isVisible = createMemo(
+                        () => props.state() === item.state_name,
+                    )
+                    return (
+                        <div class="pointer-events-none absolute flex w-full items-center justify-center">
                             <div
-                                class={`grid transition-all duration-500 ease-in-out ${isVisible() ? 'grid-rows-[1fr] delay-300' : 'grid-rows-[0fr]'}`}
+                                onclick={(e) => e.stopPropagation()}
+                                class={`pointer-events-auto w-xl max-w-full transition-all duration-700 ${
+                                    isVisible() ? 'opacity-100' : 'opacity-0'
+                                } `}
                             >
-                                {/*If modals cause lag then wrap in show
+                                <div
+                                    class={`grid transition-all duration-500 ease-in-out ${isVisible() ? 'grid-rows-[1fr] delay-300' : 'grid-rows-[0fr]'}`}
+                                >
+                                    {/*If modals cause lag then wrap in show
                                 component here*/}
-                                <div class="w-xl overflow-hidden">
-                                    {item.content}
+                                    <div class="w-xl overflow-hidden">
+                                        {item.content}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )
-            }}
-        </For>
-    </div>
-)
+                    )
+                }}
+            </For>
+        </div>
+    )
+}
 
 export default ModalContainer

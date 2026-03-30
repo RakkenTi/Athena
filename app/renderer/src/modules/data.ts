@@ -1,7 +1,16 @@
+// strictly only persistent data should be handled here.
+// temporary data should be part of globals.
+
 import { batch, createEffect, createRoot, createSignal } from 'solid-js'
 import { getApi } from './ipc_client'
 import type { IpcApi } from '../../../main/src/types/APISchema'
-import { content, generateVibrantColour, setContent } from './globals'
+import {
+    extractBaseURL,
+    extractContentParts as extractContentPartsFromContent,
+    generateVibrantColour,
+    iterateUrlsInContentParts,
+    registerMediaFilter,
+} from './globals'
 import { version } from '../../../../package.json'
 import { createStore, unwrap } from 'solid-js/store'
 import { migrateOldData } from './data_migrate'
@@ -25,6 +34,11 @@ export const [refFiles, setRefFiles] = createSignal<FileRefs>({})
 export const [linkPreviewCache, setLinkPreviewCache] = createSignal<
     Record<string, Awaited<ReturnType<typeof IpcApi.scrapeWebsiteData>>>
 >({})
+
+// Moment Creator
+export const [title, setTitle] = createSignal<string>('')
+export const [content, setContent] = createSignal<string>('')
+export const [tagsString, setTagsString] = createSignal<string>('')
 
 // Moments
 export interface MomentData {
@@ -56,8 +70,11 @@ export const [selectedArchiveId, setSelectedArchive] =
     createSignal<ArchiveId>(defaultArchiveId)
 
 // Tags
-export type Tags = Record<TagId, Tag>
 export type TagId = `tag_${string}`
+export const [selectedTagIds, setSelectedTagIds] = createSignal<Array<TagId>>(
+    [],
+)
+export type Tags = Record<TagId, Tag>
 export interface Tag {
     id: TagId
     name: string
@@ -65,25 +82,12 @@ export interface Tag {
     refCount: number
 }
 export const [allTags, setAllTags] = createStore<Record<TagId, Tag>>({}) // tag_id: tag
-export const [selectedTagIds, setSelectedTagIds] = createSignal<Array<TagId>>(
-    [],
-) // tag id
 
 // Filters
 export const [dateFilter, setDateFilter] = createSignal<{
     start: Date
     end: Date
 }>({ start: BeginningOfTime, end: EndOfTime })
-
-// url:nickname
-export const [
-    availableURLFiltersAndNicknames,
-    setAvailableURLFiltersAndNicknames,
-] = createSignal<Record<string, string>>({})
-
-export const [selectedURLFilters, setSelectedURLFilters] = createSignal<
-    Array<string>
->([])
 
 // Loading, must happen at least once before saving!
 let isLoaded = false
@@ -140,7 +144,10 @@ const loadData = async () => {
 loadData()
 
 // Saving
-const createDebounce = (callback: Function, timeoutDuration: number) => {
+const createDebounce = (
+    callback: (...args: any) => any,
+    timeoutDuration: number,
+) => {
     let timeoutId: number | undefined
 
     return (...args: Array<any>) => {
@@ -152,6 +159,9 @@ const createDebounce = (callback: Function, timeoutDuration: number) => {
         }, timeoutDuration)
     }
 }
+
+// Data saving
+let lastSavedString = ''
 
 export interface dataSnapshot {
     version: string
@@ -168,6 +178,9 @@ const writeSave = createDebounce((snapshot: dataSnapshot) => {
 
 createRoot(() => {
     createEffect(() => {
+        JSON.stringify(allMoments)
+        JSON.stringify(allTags)
+        if (!isLoaded) return
         const snapshot: dataSnapshot = {
             version,
             archives: archives(),
@@ -176,8 +189,11 @@ createRoot(() => {
             linkPreviewCache: linkPreviewCache(),
         }
 
-        if (!isLoaded) return
+        const savedDataString = JSON.stringify(snapshot)
+
         console.log('Snapshot to save:', snapshot)
+        if (lastSavedString == savedDataString) return
+        lastSavedString = savedDataString
         writeSave(snapshot)
     })
 })
@@ -235,6 +251,16 @@ export const deleteArchive = (archiveId: ArchiveId) => {
     })
 }
 
+// Editing Moments
+export const [editingMoment, setEditingMoment] = createSignal<
+    MomentId | undefined
+>()
+
+// Deleting Moments
+export const [momentToDelete, setMomentToDelete] = createSignal<
+    MomentId | undefined
+>()
+
 // Moments
 export const createMoment = (data: Omit<MomentData, 'uuid'>) => {
     const newMomentId: MomentId = `moment_${window.crypto.randomUUID()}`
@@ -282,33 +308,64 @@ export const updateMoment = (
     const newTagIds = changes.tagIds
     if (!oldMoment) return
 
-    batch(() => {
-        if (newTagIds) {
-            const oldIds = oldMoment.tagIds
+    if (newTagIds) {
+        const oldIds = oldMoment.tagIds
 
-            const removed = oldIds.filter((id) => !newTagIds.includes(id))
-            const added = newTagIds.filter((id) => !oldIds.includes(id))
-
-            removed.forEach((id) => {
-                if (!allTags[id]) return
-                const newCount = allTags[id].refCount - 1
-                if (newCount <= 0) {
-                    setAllTags(id, undefined!)
-                } else {
-                    setAllTags(id, 'refCount', newCount)
-                }
-            })
-
-            added.forEach((id) => {
-                if (!allTags[id]) return
-                // increase ref count. used for auto tag deletion
-                setAllTags(id, 'refCount', (v) => v + 1)
+        // Update Media Filters
+        subtractMediaFiltersFromContent(oldMoment.content)
+        const newContent = changes.content
+        if (newContent) {
+            const contentParts = extractContentPartsFromContent(newContent)
+            iterateUrlsInContentParts(contentParts, (url) => {
+                const baseUrl = extractBaseURL(url)
+                if (!baseUrl) return
+                registerMediaFilter(baseUrl)
             })
         }
-        setAllMoments(momentId, changes)
-    })
+
+        // Update tags
+        const removed = oldIds.filter((id) => !newTagIds.includes(id))
+        const added = newTagIds.filter((id) => !oldIds.includes(id))
+
+        removed.forEach((id) => {
+            if (!allTags[id]) return
+            const newCount = allTags[id].refCount - 1
+            if (newCount <= 0) {
+                setAllTags(id, undefined!)
+                // remove from selected tags
+                setSelectedTagIds((prev) => prev.filter((tagId) => tagId != id))
+            } else {
+                setAllTags(id, 'refCount', newCount)
+            }
+        })
+
+        added.forEach((id) => {
+            if (!allTags[id]) return
+            // increase ref count. used for auto tag deletion
+            setAllTags(id, 'refCount', (v) => v + 1)
+        })
+    }
+
+    setAllMoments(momentId, changes)
 
     return true
+}
+
+const subtractMediaFiltersFromContent = (content: string) => {
+    // Delete media filters that are no longer attached to any moments.
+    const contentParts = extractContentPartsFromContent(content)
+    iterateUrlsInContentParts(contentParts, (url) => {
+        const baseUrl = extractBaseURL(url)
+        if (!baseUrl) return
+        if (mediaFilters[baseUrl]) {
+            const newValue = mediaFilters[baseUrl].refCount - 1
+            setMediaFilters(baseUrl, 'refCount', newValue)
+            console.log('Removed!', newValue)
+            if (newValue <= 0) {
+                setMediaFilters(baseUrl, undefined!)
+            }
+        }
+    })
 }
 
 export const deleteMoment = (uuid: MomentId) => {
@@ -343,8 +400,27 @@ export const deleteMoment = (uuid: MomentId) => {
         }
     }
 
+    subtractMediaFiltersFromContent(momentToDelete.content)
+
     return true
 }
+
+// Media Filters
+// url:nickname
+export interface MediaFilter {
+    url: string
+    nickname: string
+    refCount: number
+}
+export type url = string // https://google.com but also https://google.com/asgh3qd12rwqd
+export type baseUrlString = string // like https://google.com and not https://google.com/129uiyd81u
+export const [mediaFilters, setMediaFilters] = createStore<
+    Record<baseUrlString, MediaFilter>
+>({})
+
+export const [selectedURLFilters, setSelectedURLFilters] = createSignal<
+    Array<string>
+>([])
 
 // Tags
 export const registerTags = (newTags: Array<string>): Array<TagId> => {

@@ -3,10 +3,10 @@ import { InputFrame } from './InputFrame'
 import { Line } from './Line'
 import { ClearFilterButton } from './ClearFilterButton'
 import {
-    availableURLFiltersAndNicknames,
     BeginningOfTime,
     dateFilter,
     EndOfTime,
+    mediaFilters,
     selectedURLFilters,
     setDateFilter,
     setSelectedURLFilters,
@@ -64,9 +64,7 @@ export const FilterBar: Component = () => {
         })
     }
 
-    const getMediaFilterArray = createMemo(() =>
-        Object.entries(availableURLFiltersAndNicknames()),
-    )
+    const getMediaFilterArray = createMemo(() => Object.entries(mediaFilters))
 
     return (
         <div class="bg-element flex flex-col gap-4 rounded-xl p-4 transition-all duration-100">
@@ -108,13 +106,13 @@ export const FilterBar: Component = () => {
             </div>
             <div class="flex flex-col gap-2">
                 <For each={getMediaFilterArray()}>
-                    {([url, nickname]) => (
+                    {([url, mediaFilterData]) => (
                         <div class="group p-1">
                             <span
                                 onClick={() => toggleMediaFilter(url)}
                                 class={`${selectedURLFilters().includes(url.toLowerCase()) ? 'text-highlight-strongest' : 'text-sub'} group-hover:text-highlight-strongest block font-semibold tracking-tight transition-all duration-200 select-none group-hover:scale-105 group-hover:cursor-pointer hover:font-bold hover:tracking-widest active:scale-100`}
                             >
-                                [ {nickname || url || 'hello'} ]
+                                [ {mediaFilterData.nickname || url || 'hello'} ]
                             </span>
                         </div>
                     )}

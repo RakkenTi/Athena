@@ -11,6 +11,6 @@ try {
             shell: true,
         },
     )
-} catch (e) {
+} catch {
     process.exit(0)
 }

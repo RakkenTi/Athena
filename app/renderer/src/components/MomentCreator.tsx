@@ -1,6 +1,7 @@
 import {
     createEffect,
     createMemo,
+    createSignal,
     For,
     onMount,
     Show,
@@ -12,45 +13,64 @@ import {
     allMoments,
     allTags,
     archives,
+    content,
     createMoment,
     defaultArchiveName,
+    editingMoment,
     registerTags,
     saveFileReference,
     selectedArchiveId,
+    setContent,
+    setEditingMoment,
+    setTagsString,
+    setTitle,
+    tagsString,
+    title,
     updateMoment,
     type ArchiveId,
     type Tag,
 } from '../modules/data'
-import {
-    content,
-    displayedModal,
-    editingMoment,
-    setContent,
-    setDisplayedModal,
-    setEditingMoment,
-    setTagsString,
-    setTitle,
-    sortTags,
-    tagsString,
-    title,
-} from '../modules/globals'
+import { displayedModal, setDisplayedModal, sortTags } from '../modules/globals'
+import { getApi } from '../modules/ipc_client'
+
+const textDisplayClasses =
+    'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-words whitespace-pre-wrap'
 
 export const MomentCreator: Component<
     ComponentProps<'div'> & {
         hide?: boolean
     }
 > = (props) => {
-    let textAreaRef: HTMLTextAreaElement | undefined
+    let textInputAreaRef: HTMLTextAreaElement | undefined // not visible
+    let textDisplayRef: HTMLDivElement | undefined
+    const [isPreviewing, setIsPreviewing] = createSignal<boolean>(false)
+
+    onMount(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Control') setIsPreviewing(true)
+        }
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Control') setIsPreviewing(false)
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        window.addEventListener('keyup', handleKeyUp)
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown)
+            window.removeEventListener('keyup', handleKeyUp)
+        }
+    })
 
     const getSuggestableTags = createMemo(() => {
         // retrieve
+        const allTagDatas = Object.values(allTags)
         const currentTypedTags = tagsString()
             .split(',')
             .map((tag) => tag.toUpperCase().trim())
         const currentTypedTag = currentTypedTags[currentTypedTags.length - 1]
 
         const suggestedTags: Array<Tag> = []
-        for (const [_, tagData] of Object.entries(allTags)) {
+        for (const tagData of allTagDatas) {
             if (
                 tagData.name.startsWith(currentTypedTag) &&
                 !currentTypedTags.includes(tagData.name)
@@ -136,44 +156,82 @@ export const MomentCreator: Component<
         >
             <div class="overflow-hidden">
                 <div
-                    class={`flex flex-col gap-3 overflow-hidden rounded-xl transition-all duration-500 ${props.hide ? 'grid-rows-[0fr] border-0 border-black' : 'bg-element-matte border-highlight-alt grid-rows-[1fr] border p-4'}`}
+                    class={`flex flex-col gap-3 overflow-hidden rounded-xl transition-all duration-500 ${props.hide ? 'border-element-matte grid-rows-[0fr] border-0' : 'bg-element-matte border-highlight-alt grid-rows-[1fr] border p-4'}`}
                 >
                     <input
-                        class="bg-transparent px-2 py-1 text-lg font-bold text-slate-100 placeholder-slate-600 outline-none"
+                        class="text-plain placeholder-sub bg-transparent px-2 py-1 text-lg font-bold outline-none"
                         placeholder="Moment Title..."
                         value={props.hide ? '' : title()}
                         onInput={(e) => setTitle(e.currentTarget.value)}
                     />
-                    <textarea
-                        ref={textAreaRef}
-                        class="field-sizing-content h-auto max-h-96 min-h-12 bg-transparent px-2 py-1 text-sm text-slate-300 placeholder-slate-600 outline-none placeholder:italic"
-                        placeholder="Moment description..."
-                        onPaste={(e) => {
-                            const clipboardData = e.clipboardData
-                            if (!clipboardData) return
-
-                            const items = clipboardData.items
-                            for (let i = 0; i < items.length; i++) {
-                                const item = items[i]
-                                if (item.kind == 'file') {
-                                    const file = item.getAsFile()
-                                    e.preventDefault()
-                                    if (file) {
-                                        saveFileReference(file, {
-                                            Start: textAreaRef?.selectionStart,
-                                            End: textAreaRef?.selectionEnd,
-                                        })
-                                    }
-                                    return
+                    <div class="relative grid w-full">
+                        <div
+                            ref={textDisplayRef}
+                            aria-hidden="true"
+                            class={textDisplayClasses}
+                        >
+                            <For each={content().split(/(https?:\/\/[^\s]+)/g)}>
+                                {(part, index) =>
+                                    index() % 2 === 1 ? (
+                                        <span
+                                            onClick={() =>
+                                                getApi().openExternalBrowser(
+                                                    part,
+                                                )
+                                            }
+                                            class="text-highlight-strongest underline hover:cursor-pointer"
+                                        >
+                                            {part}
+                                        </span>
+                                    ) : (
+                                        <span class="text-main">{part}</span>
+                                    )
                                 }
-                            }
-                        }}
-                        value={props.hide ? '' : content()}
-                        onInput={(e) => setContent(e.currentTarget.value)}
-                    />
+                            </For>
+                            {content().endsWith('\n') ? <br /> : ''}
+                        </div>
+                        <textarea
+                            ref={textInputAreaRef}
+                            onScroll={(e) => {
+                                if (textDisplayRef) {
+                                    textDisplayRef.scrollTop =
+                                        e.currentTarget.scrollTop
+                                }
+                            }}
+                            class={`${textDisplayClasses} caret-main selection:bg-highlight-strong selection:text-main placeholder:text-sub field-sizing-content resize-none bg-transparent text-transparent transition-colors outline-none placeholder:italic ${
+                                isPreviewing()
+                                    ? 'pointer-events-none cursor-default'
+                                    : 'pointer-events-auto cursor-text'
+                            }`}
+                            placeholder="Moment description..."
+                            onPaste={(e) => {
+                                // Creating file references / previews
+                                const clipboardData = e.clipboardData
+                                if (!clipboardData) return
+
+                                const items = clipboardData.items
+                                for (let i = 0; i < items.length; i++) {
+                                    const item = items[i]
+                                    if (item.kind == 'file') {
+                                        const file = item.getAsFile()
+                                        e.preventDefault()
+                                        if (file) {
+                                            saveFileReference(file, {
+                                                Start: textInputAreaRef?.selectionStart,
+                                                End: textInputAreaRef?.selectionEnd,
+                                            })
+                                        }
+                                        return
+                                    }
+                                }
+                            }}
+                            value={props.hide ? '' : content()}
+                            onInput={(e) => setContent(e.currentTarget.value)}
+                        />
+                    </div>
                     <div class="mx-2 flex w-full flex-col items-center gap-6">
                         <input
-                            class="w-full rounded border border-transparent bg-slate-950/50 px-2 py-1.5 font-mono text-xs text-cyan-400 placeholder-slate-600 outline-none focus:border-cyan-800"
+                            class="bg-element text-highlight-matte placeholder-sub focus:border-highlight-strong w-full rounded border border-transparent px-2 py-1.5 font-mono text-xs outline-none"
                             placeholder="Tags (comma separated)... e.g. GAMES, ENTERTAINMENT, ROMANCE"
                             value={props.hide ? '' : tagsString()}
                             onInput={(e) =>
@@ -188,10 +246,8 @@ export const MomentCreator: Component<
 
                         <Show
                             when={
+                                (title() != '' || content() != '') &&
                                 getSuggestableTags().length > 0 &&
-                                (title() != '' ||
-                                    content() != '' ||
-                                    tagsString() != '') &&
                                 !props.hide
                             }
                         >
@@ -229,7 +285,7 @@ export const MomentCreator: Component<
                         <div class="flex w-full flex-wrap items-center justify-between text-sm">
                             <div class="text-element-accent-highlight flex items-center gap-2 px-2 font-mono tracking-widest">
                                 <span>DESTINATION:</span>
-                                <span class="rounded bg-slate-800 px-2 py-1 text-cyan-400">
+                                <span class="bg-element-accent text-highlight-matte rounded px-2 py-1">
                                     {archives()[
                                         selectedArchiveId() || ('' as ArchiveId)
                                     ]?.name || defaultArchiveName}

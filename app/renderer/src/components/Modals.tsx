@@ -1,9 +1,11 @@
-import { deleteMoment } from '../modules/data'
+import {
+    deleteMoment,
+    momentToDelete,
+    setMomentToDelete,
+} from '../modules/data'
 import {
     displayedModal,
-    momentToDelete,
     setDisplayedModal,
-    setMomentToDelete,
     type MODAL_NAMES,
 } from '../modules/globals'
 import ConfirmModal from './ConfirmModal'

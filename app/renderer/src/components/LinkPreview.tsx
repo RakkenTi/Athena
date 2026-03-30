@@ -147,8 +147,8 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                         onClick={() => getApi().openExternalBrowser(props.url)}
                         class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border p-2 hover:cursor-pointer"
                     >
-                        <div class="flex w-full justify-between">
-                            <span class="text-highlight-strong group font-black">
+                        <div class="flex w-full justify-between gap-2">
+                            <span class="text-highlight-strong group font-black break-all">
                                 {websiteData()?.title || props.url}
                             </span>
                             <span class="text-element-accent-highlight group font-black">

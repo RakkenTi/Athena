@@ -3,17 +3,53 @@ import {
     allMoments,
     dateFilter,
     defaultArchiveId,
+    mediaFilters,
     selectedArchiveId,
     selectedTagIds,
     selectedURLFilters,
+    setMediaFilters,
+    type baseUrlString,
     type MomentData,
-    type MomentId,
+    type url,
 } from './data'
 import { allTags, type Tag } from './data'
+import {
+    URL_DOMAIN_REGEX,
+    URL_FILE_REGEX,
+    URL_MAIN_DOMAIN_REGEX,
+    URL_REGEX,
+} from './regex'
 
 export const generateVibrantColour = () => {
     const hue = Math.floor(Math.random() * 360)
     return `hsl(${hue}, 70%, 60%)`
+}
+
+export const extractBaseURL = (url: baseUrlString) => {
+    const match =
+        url.match(URL_MAIN_DOMAIN_REGEX) || url.match(URL_DOMAIN_REGEX)
+    if (match) {
+        return match[0].toLowerCase()
+    }
+}
+
+export const registerMediaFilter = (url: url) => {
+    const match =
+        url.match(URL_MAIN_DOMAIN_REGEX) || url.match(URL_DOMAIN_REGEX)
+    if (match && match.groups) {
+        const domainName = match.groups.domain
+        const baseUrl = match[0].toLowerCase()
+
+        if (!mediaFilters[baseUrl]) {
+            setMediaFilters(baseUrl, {
+                url,
+                nickname: domainName.toUpperCase(),
+                refCount: 1,
+            })
+        } else {
+            setMediaFilters(baseUrl, 'refCount', (v) => v + 1)
+        }
+    }
 }
 
 /**
@@ -56,7 +92,7 @@ export const sortTags = (tagsToSort: Array<Tag>) => {
     })
 }
 
-export let getFilteredMoments: Accessor<Array<MomentData>> = () => {
+export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
     const momentsPool = Object.values(allMoments)
     return momentsPool
         .filter((momentData) => {
@@ -112,20 +148,23 @@ export let getFilteredMoments: Accessor<Array<MomentData>> = () => {
         )
 }
 
-// Moment Creator
-export const [title, setTitle] = createSignal<string>('')
-export const [content, setContent] = createSignal<string>('')
-export const [tagsString, setTagsString] = createSignal<string>('')
+// Moment Content
+export const extractContentParts = (content: string) => {
+    return content
+        .split(URL_FILE_REGEX)
+        .filter((fragment) => fragment && fragment.trim() !== '')
+}
 
-// Editing Moments
-export const [editingMoment, setEditingMoment] = createSignal<
-    MomentId | undefined
->()
-
-// Deleting Moments
-export const [momentToDelete, setMomentToDelete] = createSignal<
-    MomentId | undefined
->()
+export const iterateUrlsInContentParts = (
+    contentParts: Array<string>,
+    callback: (url: string) => any,
+) => {
+    for (const text of contentParts) {
+        if (text.match(URL_REGEX)) {
+            callback(text)
+        }
+    }
+}
 
 // Modals
 export type MODAL_NAMES = 'NONE' | 'EDIT_MODAL' | 'CONFIRM_MOMENT_DELETE'

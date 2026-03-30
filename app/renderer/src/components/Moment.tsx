@@ -1,5 +1,6 @@
 import {
     createEffect,
+    createMemo,
     createSignal,
     For,
     onCleanup,
@@ -10,31 +11,27 @@ import {
 } from 'solid-js'
 import { Line } from './Line'
 import { LinkPreview } from './LinkPreview'
-import {
-    FILE_REF_REGEX,
-    URL_DOMAIN_REGEX,
-    URL_FILE_REGEX,
-    URL_MAIN_DOMAIN_REGEX,
-    URL_REGEX,
-} from '../modules/regex'
+import { FILE_REF_REGEX, URL_REGEX } from '../modules/regex'
 import {
     archives,
     defaultArchiveId,
-    setAvailableURLFiltersAndNicknames,
     allTags,
     type MomentData,
+    setTitle,
+    setContent,
+    setTagsString,
+    setEditingMoment,
+    setMomentToDelete,
 } from '../modules/data'
 import { FilePreview } from './FilePreview'
 import {
     displayedModal,
     iconClasses,
     rootMarginPixels,
-    setContent,
     setDisplayedModal,
-    setEditingMoment,
-    setMomentToDelete,
-    setTagsString,
-    setTitle,
+    registerMediaFilter,
+    extractContentParts,
+    iterateUrlsInContentParts,
 } from '../modules/globals'
 
 export type MomentProps = ComponentProps<'div'> & {
@@ -53,28 +50,13 @@ export const Moment: Component<MomentProps> = (props) => {
         }
     })
 
-    const contentParts = () =>
-        data.content
-            .split(URL_FILE_REGEX)
-            .filter((fragment) => fragment && fragment.trim() !== '')
+    // keep as memo, or else content is not reactive.
+    const contentParts = createMemo(() => extractContentParts(data.content))
 
     // extract urls
-    createEffect(() => {
-        for (const text of contentParts()) {
-            if (text.match(URL_REGEX)) {
-                const match =
-                    text.match(URL_MAIN_DOMAIN_REGEX) ||
-                    text.match(URL_DOMAIN_REGEX)
-
-                if (match && match.groups) {
-                    const domainName = match.groups.domain
-
-                    setAvailableURLFiltersAndNicknames((prev) => ({
-                        ...prev,
-                        [match[0].toLowerCase()]: domainName.toUpperCase(),
-                    }))
-                }
-            }
+    iterateUrlsInContentParts(contentParts(), (fragment) => {
+        if (fragment.match(URL_REGEX)) {
+            registerMediaFilter(fragment)
         }
     })
 
@@ -142,9 +124,14 @@ export const Moment: Component<MomentProps> = (props) => {
                                     setTitle(data.title)
                                     setContent(data.content)
                                     setTagsString(
-                                        [...data.tagIds]
-                                            .map((tagId) => allTags[tagId].name)
-                                            .join(',') + ',',
+                                        (
+                                            [...data.tagIds]
+                                                .map(
+                                                    (tagId) =>
+                                                        allTags[tagId].name,
+                                                )
+                                                .join(',') + ','
+                                        ).replace(/,\s*$/, ''),
                                     )
                                     setEditingMoment(data.uuid)
                                 }}
@@ -168,7 +155,7 @@ export const Moment: Component<MomentProps> = (props) => {
                             />
                         </div>
                     </div>
-                    <span class="tracking text-4xl font-black">
+                    <span class="tracking text-4xl font-black break-all">
                         {data.title}
                     </span>
                 </div>
