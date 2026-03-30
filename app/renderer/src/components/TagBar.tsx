@@ -6,6 +6,8 @@ import {
     allTags,
     type Tag,
     type TagId,
+    selectedArchiveId,
+    defaultArchiveId,
 } from '../modules/data'
 import { getFilteredMoments, sortTags } from '../modules/globals'
 
@@ -21,8 +23,11 @@ export const TagBar: Component = () => {
 
     const availableTags = createMemo(() => {
         const currentSelected = selectedTagIds()
+        const filteredMoments = getFilteredMoments()
+        if (selectedArchiveId() == defaultArchiveId)
+            return sortTags(Object.values(allTags))
 
-        const remainingMoments = getFilteredMoments().filter((moment) =>
+        const remainingMoments = filteredMoments.filter((moment) =>
             currentSelected.every((tagId) => moment.tagIds.includes(tagId)),
         )
 
