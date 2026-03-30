@@ -6,8 +6,6 @@ import {
     allTags,
     type Tag,
     type TagId,
-    selectedArchiveId,
-    defaultArchiveId,
 } from '../modules/data'
 import { getFilteredMoments, sortTags } from '../modules/globals'
 
