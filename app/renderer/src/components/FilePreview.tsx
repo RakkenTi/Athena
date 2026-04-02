@@ -6,6 +6,7 @@ import {
     type ComponentProps,
 } from 'solid-js'
 import { getApi } from '../modules/ipc_client'
+import { maxImageHeight } from '../modules/globals'
 
 const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'avif']
 
@@ -62,7 +63,7 @@ export const FilePreview: Component<
                             />
                             <img
                                 src={props.uri}
-                                class="bg-element z-10 max-h-150 w-full rounded object-contain hover:cursor-pointer"
+                                class={`bg-element z-10 ${maxImageHeight()} w-full rounded object-contain hover:cursor-pointer`}
                             ></img>
                         </div>
                     </div>

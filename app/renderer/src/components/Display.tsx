@@ -9,7 +9,9 @@ const Display: Component = () => (
         <div class="z-10 order-1 h-full w-full md:block lg:max-w-xs">
             <ArchivesBar />
         </div>
-        <div class="order-3 h-full w-full overflow-clip overflow-y-auto lg:order-2 lg:max-w-4xl">
+        <div
+            class={`order-3 h-full w-full overflow-clip overflow-y-auto lg:order-2 lg:max-w-4xl`}
+        >
             <Feed />
         </div>
         <div class="z-10 order-2 h-full w-full text-center md:block lg:order-3 lg:max-w-xs lg:text-left">

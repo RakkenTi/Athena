@@ -30,11 +30,16 @@ import {
     type ArchiveId,
     type Tag,
 } from '../modules/data'
-import { displayedModal, setDisplayedModal, sortTags } from '../modules/globals'
+import {
+    displayedModal,
+    displayedMomentModalId,
+    setDisplayedModal,
+    sortTags,
+} from '../modules/globals'
 import { getApi } from '../modules/ipc_client'
 
 const textDisplayClasses =
-    'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-words whitespace-pre-wrap'
+    'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal wrap-break-word whitespace-pre-wrap'
 
 export const MomentCreator: Component<
     ComponentProps<'div'> & {
@@ -132,7 +137,11 @@ export const MomentCreator: Component<
             console.log('Attempting to modify moment!')
             saveEdit()
             setEditingMoment()
-            setDisplayedModal('NONE')
+            if (displayedMomentModalId()) {
+                setDisplayedModal('DISPLAY_MOMENT_MODAL')
+            } else {
+                setDisplayedModal('NONE')
+            }
         } else {
             submitNewMoment()
         }
@@ -141,7 +150,6 @@ export const MomentCreator: Component<
 
     onMount(() => {
         createEffect(() => {
-            console.log('test')
             if (displayedModal() != 'NONE') return
             setEditingMoment()
             setContent('')

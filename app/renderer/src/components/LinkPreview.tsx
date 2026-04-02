@@ -15,7 +15,7 @@ import {
     YOUTUBE_ID_REGEX,
 } from '../modules/regex'
 import { linkPreviewCache, setLinkPreviewCache } from '../modules/data'
-import { rootMarginPixels } from '../modules/globals'
+import { maxImageHeight, rootMarginPixels } from '../modules/globals'
 
 interface LinkPreviewProps extends ComponentProps<'div'> {
     url: string
@@ -161,7 +161,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                 <div class="flex justify-between">
                     <div class="flex min-w-0 items-center gap-3 pr-2">
                         <img
-                            class="bg-element max-h-120 rounded object-contain"
+                            class={`bg-element ${maxImageHeight()} rounded object-contain`}
                             src={`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${props.url}`}
                         />
                         <span class="text-highlight-alt-strong flex-1 truncate text-lg font-black">
@@ -197,7 +197,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                             onClick={() =>
                                 openDirectImage(websiteData()?.image)
                             }
-                            class="border-highlight-alt-strongest bg-element z-10 max-h-1/3 rounded object-contain hover:cursor-pointer"
+                            class={`border-highlight-alt-strongest bg-element z-10 ${maxImageHeight()} rounded object-contain hover:cursor-pointer`}
                             src={`${websiteData()?.image || ''}`}
                         />
                     </div>

@@ -1,4 +1,4 @@
-import { createSignal, type Accessor } from 'solid-js'
+import { createMemo, createSignal, type Accessor } from 'solid-js'
 import {
     allMoments,
     dateFilter,
@@ -10,6 +10,7 @@ import {
     setMediaFilters,
     type baseUrlString,
     type MomentData,
+    type MomentId,
     type url,
 } from './data'
 import { allTags, type Tag } from './data'
@@ -166,11 +167,34 @@ export const iterateUrlsInContentParts = (
     }
 }
 
-// Modals
-export type MODAL_NAMES = 'NONE' | 'EDIT_MODAL' | 'CONFIRM_MOMENT_DELETE'
+// Display Type
+// for use in grid, as clicking a moment in a grid displays it as a modal.
+export const [displayedMomentModalId, setDisplayedMomentModalId] = createSignal<
+    MomentId | undefined
+>()
+
+export const [displayType, setDisplayType] = createSignal<'Grid' | 'Full'>(
+    'Full',
+)
+
+export const closeMomentModal = () => {
+    setDisplayedMomentModalId()
+    setDisplayedModal('NONE')
+}
+
+export type MODAL_NAMES =
+    | 'NONE'
+    | 'EDIT_MODAL'
+    | 'CONFIRM_MOMENT_DELETE'
+    | 'DISPLAY_MOMENT_MODAL'
 
 export const [displayedModal, setDisplayedModal] =
     createSignal<MODAL_NAMES>('NONE')
+
+// Media
+export const maxImageHeight = createMemo(() => {
+    return ` ${displayedMomentModalId() ? 'max-h-100' : 'max-h-140'} `
+})
 
 // Constants
 export const iconClasses =
