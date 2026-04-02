@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+.material-symbols-outlined, .material-icons {
+    color: var(--color-main);
+}
+
 @theme {
     --color-element-matte: var(--color-slate-950);
     --color-element: color-mix(in srgb, var(--color-slate-950) 50%, transparent);
