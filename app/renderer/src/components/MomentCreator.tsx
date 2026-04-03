@@ -39,7 +39,7 @@ import {
 import { getApi } from '../modules/ipc_client'
 
 const textDisplayClasses =
-    'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal wrap-break-word whitespace-pre-wrap'
+    'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-all whitespace-pre-wrap'
 
 export const MomentCreator: Component<
     ComponentProps<'div'> & {
