@@ -134,6 +134,7 @@ export const MomentCreator: Component<
             tagIds: saveTags(),
         })
         saveArchiveChanges()
+        setBufferArchive(archiveName() || '')
     }
 
     const attemptSubmit = () => {
@@ -334,7 +335,7 @@ export const MomentCreator: Component<
                         <Line class="bg-element-accent h-0.5 w-full" />
                         <div class="flex w-full flex-wrap items-center justify-between text-sm">
                             <div class="group bg-element-accent bg flex items-center gap-1 rounded p-2">
-                                <div class="text-element-accent-highlight flex items-center gap-2 font-mono tracking-widest">
+                                <div class="text-element-accent-highlight flex items-center gap-2 px-2 font-mono tracking-widest">
                                     <span>DESTINATION:</span>
                                     <input
                                         ref={archiveInputRef}
