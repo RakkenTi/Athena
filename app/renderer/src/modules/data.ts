@@ -258,7 +258,7 @@ export const deleteArchive = (archiveId: ArchiveId) => {
 }
 
 // Editing Moments
-export const [editingMoment, setEditingMoment] = createSignal<
+export const [editingMomentId, setEditingMomentId] = createSignal<
     MomentId | undefined
 >()
 

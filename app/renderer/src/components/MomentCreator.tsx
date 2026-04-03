@@ -15,13 +15,14 @@ import {
     archives,
     content,
     createMoment,
+    defaultArchiveId,
     defaultArchiveName,
-    editingMoment,
+    editingMomentId,
     registerTags,
     saveFileReference,
     selectedArchiveId,
     setContent,
-    setEditingMoment,
+    setEditingMomentId,
     setTagsString,
     setTitle,
     tagsString,
@@ -121,7 +122,7 @@ export const MomentCreator: Component<
     }
 
     const saveEdit = () => {
-        const targetMomentId = editingMoment()
+        const targetMomentId = editingMomentId()
         const targetMomentData = targetMomentId && allMoments[targetMomentId]
         if (!targetMomentData) return
         updateMoment(targetMomentId, {
@@ -133,10 +134,10 @@ export const MomentCreator: Component<
 
     const attemptSubmit = () => {
         if (title().trim() == '' || content().trim() == '') return
-        if (displayedModal() == 'EDIT_MODAL' && editingMoment()) {
+        if (displayedModal() == 'EDIT_MODAL' && editingMomentId()) {
             console.log('Attempting to modify moment!')
             saveEdit()
-            setEditingMoment()
+            setEditingMomentId()
             if (displayedMomentModalId()) {
                 setDisplayedModal('DISPLAY_MOMENT_MODAL')
             } else {
@@ -151,11 +152,25 @@ export const MomentCreator: Component<
     onMount(() => {
         createEffect(() => {
             if (displayedModal() != 'NONE') return
-            setEditingMoment()
+            setEditingMomentId()
             setContent('')
             setTitle('')
             setTagsString('')
         })
+    })
+
+    const archiveName = createMemo(() => {
+        let candidateArchiveName =
+            archives()[selectedArchiveId() || ('' as ArchiveId)]?.name
+        const editMomentId = editingMomentId()
+        if (editMomentId) {
+            candidateArchiveName =
+                archives()[
+                    allMoments[editMomentId].archiveId || defaultArchiveId
+                ].name
+        }
+        if (candidateArchiveName == defaultArchiveName) return
+        return candidateArchiveName
     })
 
     return (
@@ -291,19 +306,28 @@ export const MomentCreator: Component<
 
                         <Line class="bg-element-accent h-0.5 w-full" />
                         <div class="flex w-full flex-wrap items-center justify-between text-sm">
-                            <div class="text-element-accent-highlight flex items-center gap-2 px-2 font-mono tracking-widest">
-                                <span>DESTINATION:</span>
-                                <span class="bg-element-accent text-highlight-matte rounded px-2 py-1">
-                                    {archives()[
-                                        selectedArchiveId() || ('' as ArchiveId)
-                                    ]?.name || defaultArchiveName}
-                                </span>
+                            <div class="bg-element-accent rounded p-2">
+                                <Show
+                                    when={archiveName()}
+                                    fallback={
+                                        <div class="text-element-accent-highlight flex items-center gap-2 px-2 font-mono tracking-widest">
+                                            <span>No archive</span>
+                                        </div>
+                                    }
+                                >
+                                    <div class="text-element-accent-highlight flex items-center gap-2 px-2 font-mono tracking-widest">
+                                        <span>DESTINATION:</span>
+                                        <span class="bg-element-accent text-highlight-matte rounded px-2 py-1">
+                                            {archiveName()}
+                                        </span>
+                                    </div>
+                                </Show>
                             </div>
                             <button
                                 onClick={attemptSubmit}
                                 class="hover:bg-highlight-strong hg hover:shadow-highlight-strong bg-highlight hover:border-highlight-strong rounded px-4 py-2 text-xs font-bold tracking-widest transition-all duration-200 hover:scale-105 hover:cursor-pointer hover:shadow-md hover:duration-50 active:scale-95"
                             >
-                                {editingMoment() ? 'EDIT' : 'STORE'}
+                                {editingMomentId() ? 'EDIT' : 'STORE'}
                             </button>
                         </div>
                     </div>

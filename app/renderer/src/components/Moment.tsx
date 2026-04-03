@@ -20,7 +20,7 @@ import {
     setTitle,
     setContent,
     setTagsString,
-    setEditingMoment,
+    setEditingMomentId,
     setMomentToDelete,
 } from '../modules/data'
 import { FilePreview } from './FilePreview'
@@ -130,7 +130,7 @@ export const Moment: Component<MomentProps> = (props) => {
                             </span>
                             <Show when={data.archiveId != defaultArchiveId}>
                                 <span
-                                    class={`text-sub pr-1 ${displayType() == 'Full' ? 'text-lg' : 'text-md'} font-bold tracking-tight`}
+                                    class={`text-sub pr-1 ${displayType() == 'Full' ? 'text-lg' : 'text-md'} font-bold tracking-tight transition-all duration-200`}
                                 >
                                     [{' '}
                                     {
@@ -161,7 +161,7 @@ export const Moment: Component<MomentProps> = (props) => {
                                                     .join(',') + ','
                                             ).replace(/,\s*$/, ''),
                                         )
-                                        setEditingMoment(data.uuid)
+                                        setEditingMomentId(data.uuid)
                                     }}
                                 />
                                 <i
