@@ -6,7 +6,7 @@ import {
     defaultArchiveName,
     type Archive,
     type ArchiveId,
-    type dataSnapshot,
+    type DataSnapshot,
     type MomentData,
     type MomentId,
     type Tag,
@@ -21,7 +21,7 @@ interface LegacyMomentData {
     archive?: string
 }
 
-export const migrateOldData = async (): Promise<dataSnapshot | null> => {
+export const migrateOldData = async (): Promise<DataSnapshot | null> => {
     const api = getApi()
     if (!api) return null
 
@@ -118,7 +118,7 @@ export const migrateOldData = async (): Promise<dataSnapshot | null> => {
         }
     }
 
-    const migratedSnapshot: dataSnapshot = {
+    const migratedSnapshot: DataSnapshot = {
         version,
         archives: newArchives,
         moments: newMoments,

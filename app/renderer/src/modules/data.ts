@@ -56,7 +56,7 @@ export const [allMoments, setAllMoments] = createStore<
 
 // Archives
 export const defaultArchiveId = '_default_archive_' as ArchiveId
-export const defaultArchiveName = 'GENERAL'
+export const defaultArchiveName = '__GENERAL__'
 export type ArchiveId = `archive_${string}`
 export interface Archive {
     uuid: ArchiveId
@@ -96,7 +96,12 @@ const loadData = async () => {
     isLoaded = false
 
     const migratedData = await migrateOldData()
-    const readData = migratedData || (await getApi().readData())
+    const readData: DataSnapshot = migratedData || (await getApi().readData())
+
+    // update default archive
+    if (readData.archives) {
+        readData.archives[defaultArchiveId].name = defaultArchiveName
+    }
 
     console.log(log_header)
     console.log('Loading data:', readData)
@@ -163,7 +168,7 @@ const createDebounce = (
 // Data saving
 let lastSavedString = ''
 
-export interface dataSnapshot {
+export interface DataSnapshot {
     version: string
     archives: ReturnType<typeof archives>
     moments: typeof allMoments
@@ -171,7 +176,7 @@ export interface dataSnapshot {
     linkPreviewCache: ReturnType<typeof linkPreviewCache>
 }
 
-const writeSave = createDebounce((snapshot: dataSnapshot) => {
+const writeSave = createDebounce((snapshot: DataSnapshot) => {
     getApi().writeMainData(snapshot)
     console.log('Saved Data!')
 }, 250)
@@ -181,7 +186,7 @@ createRoot(() => {
         JSON.stringify(allMoments)
         JSON.stringify(allTags)
         if (!isLoaded) return
-        const snapshot: dataSnapshot = {
+        const snapshot: DataSnapshot = {
             version,
             archives: archives(),
             moments: unwrap(allMoments),
@@ -202,6 +207,7 @@ createRoot(() => {
 // Archives
 export const createArchive = (archiveName: string) => {
     const allArchives = { ...archives() }
+    console.log(archives())
     for (const [_, archiveData] of Object.entries(allArchives)) {
         if (archiveName == archiveData.name) {
             return
