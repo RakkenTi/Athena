@@ -198,6 +198,6 @@ export const maxImageHeight = createMemo(() => {
 
 // Constants
 export const iconClasses =
-    'opacity-0 group-hover:opacity-100 fa-solid text-highlight-alt-strong hover:text-highlight-alt-strongest hover:scale-125 hover:cursor-pointer transition-all duration-200 '
+    'opacity-0 group-hover:opacity-100 fa-solid text-icon hover:text-icon-strongest hover:scale-125 hover:cursor-pointer transition-all duration-200 '
 
 export const rootMarginPixels = 2000

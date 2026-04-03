@@ -1,8 +1,14 @@
 @import 'tailwindcss';
 
 .material-symbols-outlined, .material-icons {
-    color: var(--color-main);
+    color: var(--color-icon);
+    font-size: var(--text-xl);
 }
+
+.material-symbols-outlined, .material-icons :hover {
+    color: var(--color-icon-hover);
+}
+
 
 @theme {
     --color-element-matte: var(--color-slate-950);
@@ -19,6 +25,8 @@
     --color-highlight-alt-strongest: color-mix(in srgb, var(--color-pink-500) 100%, transparent);
     --color-background: var(--color-slate-900);
     --color-main: var(--color-slate-300);
+    --color-icon: var(--color-highlight-alt-strong);
+    --color-icon-hover: var(--color-highlight-alt-strongest);
     --color-sub: var(--color-slate-500);
     --color-element-accent: var(--color-slate-800);
     --color-danger: var(--color-red-500);

@@ -36,7 +36,7 @@ export const Feed: Component = () => {
                                 </span>
                             }
                         >
-                            <i class="fa-solid fa-bars text-main hover:cursor-pointer"></i>
+                            <i class="fa-solid fa-bars text-icon hover:cursor-pointer"></i>
                         </Show>
                     </div>
                 </div>
