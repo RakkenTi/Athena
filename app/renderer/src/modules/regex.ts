@@ -1,5 +1,5 @@
 export const YOUTUBE_ID_REGEX =
-    /(youtube\.com|youtu\.be)\/(watch\?v=|)(?<id>[A-Za-z0-9]+)/
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))(?<id>[\w-]{11})/
 
 export const URL_REGEX = /https?:\/\/[^\s]+[^<.,:;"')\]\s]/g
 export const FILE_REF_REGEX = /athena:\/\/[^\s]+[^<.,:;"')\]\s]/g
