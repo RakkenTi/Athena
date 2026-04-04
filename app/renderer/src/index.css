@@ -15,7 +15,7 @@
     --color-element: color-mix(in srgb, var(--color-slate-950) 50%, transparent);
     --color-dark: var(--color-slate-800);
     --color-element-lighter: color-mix(in srgb, var(--color-slate-900) 30%, transparent);
-    --color-element-accent-highlight: var(--color-slate-500);
+    --color-element-accent-highlight: var(--color-slate-400);
     --color-highlight-matte: var(--color-cyan-500);
     --color-highlight: color-mix(in srgb, var(--color-cyan-500) 20%, transparent);
     --color-highlight-strong: color-mix(in srgb, var(--color-cyan-500) 80%, transparent);
