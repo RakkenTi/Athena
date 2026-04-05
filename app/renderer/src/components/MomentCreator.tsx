@@ -185,11 +185,13 @@ export const MomentCreator: Component<
 
     createEffect(() => {
         const editingMomentData = allMoments[editingMomentId()!]
-        if (editingMomentData) {
-            const archiveData = archives()[editingMomentData.archiveId!]
-            if (archiveData) {
-                setBufferArchive(archiveData.name)
-            }
+
+        const archiveData =
+            archives()[editingMomentData?.archiveId! || selectedArchiveId()!]
+        if (archiveData) {
+            const name =
+                archiveData.name == defaultArchiveName ? '' : archiveData.name
+            setBufferArchive(name)
         }
     })
 
@@ -346,7 +348,7 @@ export const MomentCreator: Component<
                                             setSwitchingArchive(false)
                                         }}
                                         placeholder="No Archive"
-                                        value={`${archiveName() ? bufferArchive() : ''}`}
+                                        value={`${archiveName() || bufferArchive() ? bufferArchive() : ''}`}
                                         class="bg-element-accent text-highlight-matte field-sizing-content p-1"
                                         onInput={(e) => {
                                             e.preventDefault()
