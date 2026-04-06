@@ -7,6 +7,7 @@ import { TagBar } from './components/TagBar'
 import Display from './components/Display'
 import { Modals } from './components/Modals'
 import * as json from '../../../package.json'
+import './modules/pdfjs'
 
 const App: Component = () => (
     <>

@@ -201,3 +201,12 @@ export const iconClasses =
     'opacity-0 group-hover:opacity-100 fa-solid text-icon hover:text-icon-strongest hover:scale-125 hover:cursor-pointer transition-all duration-200 '
 
 export const rootMarginPixels = 2000
+export const imageExtensions = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'svg',
+    'webp',
+    'avif',
+]
