@@ -21,7 +21,7 @@ export const startAutoUpdater = () => {
     updateElectronApp({
         updateSource: {
             type: UpdateSourceType.ElectronPublicUpdateService,
-            repo: 'RakkenTi/Athena',
+            repo: 'athenaeum-app/athena-client',
         },
         logger: console,
     })
