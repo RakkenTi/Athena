@@ -10,11 +10,11 @@ import {
     onMount,
 } from 'solid-js'
 import { getActiveLibrary, type BufferMessage } from '../modules/store'
-import { displayedModal, FormatChatDate } from '../modules/globals'
-import { FancyTextRenderer } from './FancyTextRenderer'
+import { displayedModal } from '../modules/globals'
 import { saveFileReference } from '../modules/data'
 import { flushActionQueue, queueAction } from '../modules/actions'
 import { SmartEditor } from './SmartEditor'
+import { ChatMessage } from './ChatMessage'
 
 const BATCH_SIZE = 250
 const MAX_RENDER_COUNT = 500
@@ -43,11 +43,9 @@ const Sentinel: Component<
 )
 
 export const BufferChatModal = () => {
-    let chatTextAreaRef: HTMLTextAreaElement | undefined
     let chatContainerRef: HTMLDivElement | undefined
     let topSentinelRef: HTMLDivElement | undefined
     let bottomSentinelRef: HTMLDivElement | undefined
-    let editTextArea: HTMLTextAreaElement | undefined
 
     const [name, setName] = createSignal(
         localStorage.getItem(`${getActiveLibrary()?.id}_chatname`) || '',
@@ -89,11 +87,6 @@ export const BufferChatModal = () => {
 
     const [isAtPresent, setIsAtPresent] = createSignal(true)
     const [showScrollBottom, setShowScrollBottom] = createSignal(false)
-    const [editingId, setEditingId] = createSignal<string | null>(null)
-    const [editContent, setEditContent] = createSignal('')
-    const [confirmDeleteId, setConfirmDeleteId] = createSignal<string | null>(
-        null,
-    )
 
     const processFiles = (files: FileList | File[]) => {
         let hasFiles = false
@@ -104,8 +97,8 @@ export const BufferChatModal = () => {
                 saveFileReference(
                     file,
                     {
-                        Start: chatTextAreaRef?.selectionStart,
-                        End: chatTextAreaRef?.selectionEnd,
+                        Start: undefined,
+                        End: undefined,
                     },
                     {
                         getContent: content,
@@ -204,7 +197,6 @@ export const BufferChatModal = () => {
 
                         if (existing && existing.content === m.content) {
                             existing.timestamp = m.timestamp
-
                             merged.set(m.id, existing)
                         } else {
                             merged.set(m.id, m)
@@ -358,8 +350,6 @@ export const BufferChatModal = () => {
         setLastMutationTime(Date.now())
         setRenderedMessages((prev) => prev.filter((m) => m.id !== id))
 
-        setConfirmDeleteId(null)
-
         queueAction({
             type: 'DELETE',
             target: 'BUFFER_MESSAGE',
@@ -369,15 +359,7 @@ export const BufferChatModal = () => {
         flushActionQueue()
     }
 
-    const startEditing = (msg: BufferMessage) => {
-        setEditingId(msg.id)
-        setEditContent(msg.content)
-        editTextArea?.focus()
-    }
-
-    const saveEdit = () => {
-        const id = editingId()
-        if (!id) return
+    const updateMessageContent = (id: string, newContent: string) => {
         setLastMutationTime(Date.now())
 
         setRenderedMessages((prev) => {
@@ -386,7 +368,7 @@ export const BufferChatModal = () => {
 
             const updatedMsg = {
                 ...existing,
-                content: editContent(),
+                content: newContent,
                 updated_at: new Date().toISOString(),
             }
 
@@ -400,8 +382,6 @@ export const BufferChatModal = () => {
 
             return prev.map((m) => (m.id === id ? updatedMsg : m))
         })
-
-        setEditingId(null)
     }
 
     let lastID: string
@@ -431,7 +411,6 @@ export const BufferChatModal = () => {
         if (isOpen) {
             untrack(() => {
                 syncLiveChat().then(() => {
-                    if (chatTextAreaRef) chatTextAreaRef.focus()
                     scrollToBottom()
                 })
             })
@@ -554,135 +533,14 @@ export const BufferChatModal = () => {
                     />
 
                     <For each={renderedMessages()}>
-                        {(message: BufferMessage, i) => {
-                            const showHeader = () =>
-                                shouldShowHeader(message, i())
-                            const isEditing = () => editingId() === message.id
-
-                            return (
-                                <div
-                                    id={`message-${message.id}`}
-                                    class="group text-sub relative flex flex-col px-4 pt-1 transition-all duration-100 hover:bg-white/5"
-                                >
-                                    <Show when={!isEditing()}>
-                                        <div class="bg-element-matte border-element-accent absolute top-2 right-4 z-10 hidden gap-1 rounded-lg border p-1 shadow-xl group-hover:flex">
-                                            <button
-                                                onClick={() =>
-                                                    navigator.clipboard.writeText(
-                                                        message.content,
-                                                    )
-                                                }
-                                                class="hover:bg-highlight-strong/20 text-sub hover:text-highlight-strong rounded p-1 px-2 transition-all"
-                                                title="Copy Raw Text"
-                                            >
-                                                <i class="fa-solid fa-copy text-xs"></i>
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    startEditing(message)
-                                                }
-                                                class="hover:bg-highlight-strong/20 text-sub hover:text-highlight-strong rounded p-1 px-2 transition-all"
-                                            >
-                                                <i class="fa-solid fa-pen-to-square text-xs"></i>
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    confirmDeleteId() ===
-                                                    message.id
-                                                        ? deleteMessage(
-                                                              message.id,
-                                                          )
-                                                        : setConfirmDeleteId(
-                                                              message.id,
-                                                          )
-                                                }
-                                                onMouseLeave={() =>
-                                                    setConfirmDeleteId(null)
-                                                }
-                                                class={`rounded p-1 px-2 transition-all ${confirmDeleteId() === message.id ? 'bg-red-500/20 text-[10px] font-bold text-red-400' : 'text-sub hover:bg-red-500/20 hover:text-red-400'}`}
-                                            >
-                                                <Show
-                                                    when={
-                                                        confirmDeleteId() ===
-                                                        message.id
-                                                    }
-                                                    fallback={
-                                                        <i class="fa-solid fa-trash text-xs"></i>
-                                                    }
-                                                >
-                                                    Confirm?
-                                                </Show>
-                                            </button>
-                                        </div>
-                                    </Show>
-
-                                    <Show when={showHeader()}>
-                                        <div class="flex items-baseline gap-2 pt-3">
-                                            <span class="text-highlight-strong text-sm font-black">
-                                                {message.author_name}
-                                            </span>
-                                            <span class="text-sub/50 font-mono text-xs">
-                                                {FormatChatDate(
-                                                    message.timestamp,
-                                                )}
-                                            </span>
-                                        </div>
-                                    </Show>
-
-                                    <Show
-                                        when={isEditing()}
-                                        fallback={
-                                            <FancyTextRenderer
-                                                content={message.content}
-                                                compact={true}
-                                            />
-                                        }
-                                    >
-                                        <div class="bg-element-accent/20 border-highlight-strong/30 mt-1 flex flex-col gap-2 rounded-lg border p-2">
-                                            <textarea
-                                                ref={(el) =>
-                                                    (editTextArea = el)
-                                                }
-                                                value={editContent()}
-                                                onKeyDown={(e) => {
-                                                    if (
-                                                        e.key.toLowerCase() ===
-                                                            'enter' &&
-                                                        !e.shiftKey
-                                                    ) {
-                                                        e.preventDefault()
-                                                        saveEdit()
-                                                    }
-                                                }}
-                                                onInput={(e) =>
-                                                    setEditContent(
-                                                        e.currentTarget.value,
-                                                    )
-                                                }
-                                                class="text-sub field-sizing-content max-h-[50vh] w-full resize-none overflow-y-auto bg-transparent outline-none"
-                                                rows="1"
-                                            />
-                                            <div class="flex justify-end gap-2">
-                                                <button
-                                                    onClick={() =>
-                                                        setEditingId(null)
-                                                    }
-                                                    class="text-sub/50 hover:text-sub text-xs font-bold"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    onClick={saveEdit}
-                                                    class="text-highlight-strong text-xs font-bold hover:underline"
-                                                >
-                                                    Save Changes
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </Show>
-                                </div>
-                            )
-                        }}
+                        {(message: BufferMessage, i) => (
+                            <ChatMessage
+                                message={message}
+                                showHeader={shouldShowHeader(message, i())}
+                                onUpdate={updateMessageContent}
+                                onDelete={deleteMessage}
+                            />
+                        )}
                     </For>
                     <Sentinel
                         disabled={
