@@ -8,17 +8,13 @@ import {
     type ComponentProps,
     For,
     onMount,
-    createMemo,
 } from 'solid-js'
-import {
-    allMoments,
-    getActiveLibrary,
-    type BufferMessage,
-} from '../modules/store'
+import { getActiveLibrary, type BufferMessage } from '../modules/store'
 import { displayedModal, FormatChatDate } from '../modules/globals'
 import { FancyTextRenderer } from './FancyTextRenderer'
 import { saveFileReference } from '../modules/data'
 import { flushActionQueue, queueAction } from '../modules/actions'
+import { SmartEditor } from './SmartEditor'
 
 const BATCH_SIZE = 250
 const MAX_RENDER_COUNT = 500
@@ -65,30 +61,6 @@ export const BufferChatModal = () => {
     const [pendingIds, setPendingIds] = createSignal<Set<string>>(new Set())
 
     const [isDragging, setIsDragging] = createSignal<boolean>(false)
-    const isTypingReference = createMemo(() => {
-        const text = content()
-        if (!chatTextAreaRef) return null
-
-        const cursor = chatTextAreaRef.selectionStart
-        const textBeforeCursor = text.substring(0, cursor)
-
-        const lastOpen = textBeforeCursor.lastIndexOf('[[')
-        const lastClose = textBeforeCursor.lastIndexOf(']]')
-
-        if (lastOpen !== -1 && lastOpen > lastClose) {
-            return textBeforeCursor.substring(lastOpen + 2)
-        }
-        return null
-    })
-    const suggestedMoments = createMemo(() => {
-        const query = isTypingReference()
-        if (query === null) return []
-
-        const searchLower = query.toLowerCase()
-        return Object.values(allMoments)
-            .filter((m) => m?.title?.toLowerCase().includes(searchLower))
-            .slice(0, 5)
-    })
 
     const handleDragOver = (e: DragEvent) => {
         e.preventDefault()
@@ -112,23 +84,6 @@ export const BufferChatModal = () => {
         const files = e.dataTransfer?.files
         if (files && files.length > 0) {
             processFiles(files)
-        }
-    }
-
-    const insertReference = (moment: any) => {
-        if (!chatTextAreaRef) return
-
-        const currentContent = content()
-        const cursor = chatTextAreaRef.selectionStart
-
-        const textBeforeCursor = currentContent.substring(0, cursor)
-        const openBracketPos = textBeforeCursor.lastIndexOf('[[')
-
-        if (openBracketPos !== -1) {
-            chatTextAreaRef.focus()
-            chatTextAreaRef.setSelectionRange(openBracketPos + 2, cursor)
-
-            document.execCommand('insertText', false, `${moment.uuid}]] `)
         }
     }
 
@@ -784,69 +739,23 @@ export const BufferChatModal = () => {
                     }}
                     class="bg-element-matte border-element-accent focus:border-sub/50 text-sub w-full rounded p-2 font-bold transition-all outline-none"
                 />
-                <Show
-                    when={
-                        isTypingReference() !== null &&
-                        suggestedMoments().length > 0
-                    }
-                >
-                    <div class="flex w-full flex-wrap items-center gap-2 rounded-lg py-1 text-sm font-bold tracking-widest">
-                        <span class="text-sub font-black">Link to:</span>
-                        <For each={suggestedMoments()}>
-                            {(moment) => (
-                                <button
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => insertReference(moment)}
-                                    class="bg-element hover:bg-element-accent text-sub border-element-accent hover:border-highlight-strong rounded border px-2 py-1 transition-all hover:scale-105 active:scale-95"
-                                >
-                                    {moment.title}
-                                </button>
-                            )}
-                        </For>
-                    </div>
-                </Show>
-
-                <div class="flex gap-2">
-                    <textarea
-                        ref={(el) => (chatTextAreaRef = el)}
-                        rows="1"
-                        placeholder={`Message ${getActiveLibrary()?.name || 'Library'}`}
+                <div class="flex items-end gap-2">
+                    <SmartEditor
                         value={content()}
-                        onInput={(e) => setContent(e.currentTarget.value)}
-                        onPaste={(e) => {
-                            const clipboardData = e.clipboardData
-                            if (!clipboardData) return
-
-                            const items = clipboardData.items
-                            const filesToProcess: File[] = []
-
-                            for (let i = 0; i < items.length; i++) {
-                                const item = items[i]
-                                if (item.kind == 'file') {
-                                    const file = item.getAsFile()
-                                    if (file) {
-                                        filesToProcess.push(file)
-                                    }
-                                }
-                            }
-
-                            if (filesToProcess.length > 0) {
-                                processFiles(filesToProcess)
-                                e.preventDefault()
-                            }
-                        }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault()
-                                sendMessage()
-                            }
-                        }}
-                        class="bg-element-matte border-element-accent focus:border-sub/50 text-sub field-sizing-content max-h-[25vh] w-full resize-none rounded p-3 transition-all outline-none"
+                        onInput={setContent}
+                        onSubmit={sendMessage}
+                        onFilesAdded={processFiles}
+                        placeholder={`Message ${getActiveLibrary()?.name || 'Library'}`}
+                        showMarkdownToolbar={false} // Hidden for chat
+                        submitOnEnter={true} // Send message on standard Enter
+                        maxHeightClass="max-h-[25vh]"
+                        textAreaClass="bg-element-matte border-element-accent focus:border-sub/50 text-sub field-sizing-content overflow-y-auto rounded p-3 transition-all"
                     />
+
                     <button
                         onClick={sendMessage}
                         disabled={!content().trim() || activeUploadCount() > 0}
-                        class="bg-highlight-strong text-dark hover:bg-highlight-strongest rounded px-4 font-bold transition-all disabled:pointer-events-none disabled:opacity-50"
+                        class="bg-highlight-strong text-dark hover:bg-highlight-strongest rounded px-4 py-3 font-bold transition-all disabled:pointer-events-none disabled:opacity-50"
                     >
                         <i
                             class={

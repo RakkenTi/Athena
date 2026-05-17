@@ -43,6 +43,7 @@ import {
 } from '../modules/globals'
 import { ExpandableContainer } from './ExpandableContainer'
 import { TagButton } from './TagBar'
+import { SmartEditor } from './SmartEditor'
 
 const textDisplayClasses =
     'caret-plain selection:bg-highlight-strong selection:text-sub placeholder:text-sub field-sizing-content resize-none bg-transparent  transition-colors outline-none placeholder:italic col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-all whitespace-pre-wrap'
@@ -237,51 +238,6 @@ export const MomentCreator: Component<
         }
     }
 
-    const insertMarkdown = (prefix: string, suffix: string = '') => {
-        if (!textInputAreaRef) return
-
-        const start = textInputAreaRef.selectionStart
-        const end = textInputAreaRef.selectionEnd
-        const value = textInputAreaRef.value
-
-        const selected = value.substring(start, end)
-        const newSelectedText = selected
-            ? `${prefix}${selected}${suffix}`
-            : `${prefix}${suffix}`
-
-        textInputAreaRef.focus()
-        textInputAreaRef.setSelectionRange(start, end)
-
-        document.execCommand('insertText', false, newSelectedText)
-
-        if (selected) {
-            textInputAreaRef.selectionStart = start + prefix.length
-            textInputAreaRef.selectionEnd =
-                start + prefix.length + selected.length
-        } else {
-            const newCursorPos = start + prefix.length
-            textInputAreaRef.selectionStart = newCursorPos
-            textInputAreaRef.selectionEnd = newCursorPos
-        }
-    }
-
-    const ToolbarButton: Component<{
-        icon: string
-        title: string
-        onClick: () => void
-    }> = (btnProps) => (
-        <button
-            title={btnProps.title}
-            onClick={btnProps.onClick}
-            onMouseDown={(e) => e.preventDefault()}
-            class="text-sub hover:text-highlight-strong hover:bg-element-accent flex items-center justify-center rounded p-1 transition-colors"
-        >
-            <span class="material-symbols-outlined" style="font-size: 18px;">
-                {btnProps.icon}
-            </span>
-        </button>
-    )
-
     // Moment references
     const isTypingReference = createMemo(() => {
         const text = content()
@@ -356,271 +312,30 @@ export const MomentCreator: Component<
                         onInput={(e) => setTitle(e.currentTarget.value)}
                     />
 
-                    <div class="border-element-accent flex items-center gap-1 border-b px-2 pb-2">
-                        <ToolbarButton
-                            icon="format_bold"
-                            title="Bold"
-                            onClick={() => insertMarkdown('**', '**')}
-                        />
-                        <ToolbarButton
-                            icon="format_italic"
-                            title="Italic"
-                            onClick={() => insertMarkdown('*', '*')}
-                        />
-                        <ToolbarButton
-                            icon="format_strikethrough"
-                            title="Strikethrough"
-                            onClick={() => insertMarkdown('~~', '~~')}
-                        />
-                        <div class="bg-element-accent mx-1 h-4 w-px"></div>
-                        <ToolbarButton
-                            icon="title"
-                            title="Heading"
-                            onClick={() => insertMarkdown('# ')}
-                        />
-                        <ToolbarButton
-                            icon="format_list_bulleted"
-                            title="Bullet List"
-                            onClick={() => insertMarkdown('- ')}
-                        />
-                        <ToolbarButton
-                            icon="format_quote"
-                            title="Quote"
-                            onClick={() => insertMarkdown('> ')}
-                        />
-                        <div class="bg-element-accent mx-1 h-4 w-px"></div>
-                        <ToolbarButton
-                            icon="code"
-                            title="Code"
-                            onClick={() => insertMarkdown('`', '`')}
-                        />
-                        <div class="bg-element-accent mx-1 h-4 w-px"></div>
-                        <ToolbarButton
-                            icon="table_chart"
-                            title="Table"
-                            onClick={() =>
-                                insertMarkdown(
-                                    '\n| Header 1 | Header 2 |\n| :--- | :--- |\n| Cell 1 | Cell 2 |\n',
-                                )
-                            }
-                        />
-                    </div>
-
                     <div class="relative grid w-full">
-                        <textarea
-                            ref={textInputAreaRef}
+                        <SmartEditor
+                            value={props.hide ? '' : content()}
+                            onInput={setContent}
+                            onSubmit={attemptSubmit}
+                            onFilesAdded={processFiles}
+                            popoverPlacement="bottom"
+                            placeholder="Moment description..."
+                            showMarkdownToolbar={true}
+                            submitOnEnter={false}
+                            minRows={2}
+                            enableDragAndDrop={false}
+                            maxHeightClass="max-h-96 min-h-[3rem]"
+                            textAreaClass={textDisplayClasses}
                             onScroll={(e) => {
                                 if (textDisplayRef) {
-                                    textDisplayRef.scrollTop =
-                                        e.currentTarget.scrollTop
+                                    textDisplayRef.scrollTop = (
+                                        e.target as HTMLTextAreaElement
+                                    ).scrollTop
                                 }
                             }}
-                            class={`${textDisplayClasses} text-sub`}
-                            placeholder="Moment description..."
-                            onKeyDown={(e) => {
-                                if (e.key.toLowerCase() === 'tab') {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-
-                                    const target = e.currentTarget
-                                    const start = target.selectionStart
-                                    const end = target.selectionEnd
-                                    const value = target.value
-
-                                    if (e.shiftKey) {
-                                        const firstLineStart =
-                                            value.lastIndexOf('\n', start - 1) +
-                                            1
-                                        let lastLineEnd = value.indexOf(
-                                            '\n',
-                                            end,
-                                        )
-                                        if (lastLineEnd === -1)
-                                            lastLineEnd = value.length
-
-                                        const linesText = value.substring(
-                                            firstLineStart,
-                                            lastLineEnd,
-                                        )
-                                        const lines = linesText.split('\n')
-
-                                        let charsRemovedFirstLine = 0
-                                        let totalCharsRemoved = 0
-
-                                        const newLinesText = lines
-                                            .map((line, index) => {
-                                                const match =
-                                                    line.match(/^( {1,4})/)
-                                                if (match) {
-                                                    const removed =
-                                                        match[1].length
-                                                    if (index === 0)
-                                                        charsRemovedFirstLine =
-                                                            removed
-                                                    totalCharsRemoved += removed
-                                                    return line.substring(
-                                                        removed,
-                                                    )
-                                                }
-                                                return line
-                                            })
-                                            .join('\n')
-
-                                        if (linesText !== newLinesText) {
-                                            target.setSelectionRange(
-                                                firstLineStart,
-                                                lastLineEnd,
-                                            )
-                                            document.execCommand(
-                                                'insertText',
-                                                false,
-                                                newLinesText,
-                                            )
-
-                                            target.selectionStart = Math.max(
-                                                firstLineStart,
-                                                start - charsRemovedFirstLine,
-                                            )
-                                            target.selectionEnd = Math.max(
-                                                firstLineStart,
-                                                end - totalCharsRemoved,
-                                            )
-                                        }
-                                    } else {
-                                        if (
-                                            start !== end &&
-                                            value
-                                                .substring(start, end)
-                                                .includes('\n')
-                                        ) {
-                                            const firstLineStart =
-                                                value.lastIndexOf(
-                                                    '\n',
-                                                    start - 1,
-                                                ) + 1
-                                            let lastLineEnd = value.indexOf(
-                                                '\n',
-                                                end,
-                                            )
-                                            if (lastLineEnd === -1)
-                                                lastLineEnd = value.length
-
-                                            const linesText = value.substring(
-                                                firstLineStart,
-                                                lastLineEnd,
-                                            )
-                                            const lines = linesText.split('\n')
-
-                                            const newLinesText = lines
-                                                .map((line) => '    ' + line)
-                                                .join('\n')
-
-                                            target.setSelectionRange(
-                                                firstLineStart,
-                                                lastLineEnd,
-                                            )
-                                            document.execCommand(
-                                                'insertText',
-                                                false,
-                                                newLinesText,
-                                            )
-
-                                            target.selectionStart = start + 4
-                                            target.selectionEnd =
-                                                end + lines.length * 4
-                                        } else {
-                                            insertMarkdown('    ')
-                                        }
-                                    }
-                                }
-
-                                if (e.ctrlKey || e.metaKey) {
-                                    let handled = true
-                                    const key = e.key.toLowerCase()
-
-                                    if (key === 'b') {
-                                        insertMarkdown('**', '**')
-                                    } else if (key === 'i') {
-                                        insertMarkdown('*', '*')
-                                    } else if (key === 'k') {
-                                        insertMarkdown('[', '](url)')
-                                    } else if (key === 'd') {
-                                        insertMarkdown('~~', '~~')
-                                    } else if (key === 's' || key === 'enter') {
-                                        attemptSubmit()
-                                    } else if (key === 'x') {
-                                        const textArea = textInputAreaRef
-                                        if (textArea) {
-                                            const start =
-                                                textArea.selectionStart
-                                            const end = textArea.selectionEnd
-                                            const value = textArea.value
-
-                                            const lineStart =
-                                                value.lastIndexOf(
-                                                    '\n',
-                                                    start - 1,
-                                                ) + 1
-                                            let lineEnd = value.indexOf(
-                                                '\n',
-                                                end,
-                                            )
-                                            if (lineEnd === -1) {
-                                                lineEnd = value.length
-                                            }
-
-                                            const line = value.substring(
-                                                lineStart,
-                                                lineEnd,
-                                            )
-                                            navigator.clipboard.writeText(line)
-
-                                            textArea.setSelectionRange(
-                                                lineStart,
-                                                lineEnd,
-                                            )
-                                            document.execCommand(
-                                                'insertText',
-                                                false,
-                                                '',
-                                            )
-                                        }
-                                    } else {
-                                        handled = false
-                                    }
-
-                                    if (handled) {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                    }
-                                }
-                            }}
-                            onPaste={(e) => {
-                                const clipboardData = e.clipboardData
-                                if (!clipboardData) return
-
-                                const items = clipboardData.items
-                                const filesToProcess: File[] = []
-
-                                for (let i = 0; i < items.length; i++) {
-                                    const item = items[i]
-                                    if (item.kind == 'file') {
-                                        const file = item.getAsFile()
-                                        if (file) {
-                                            filesToProcess.push(file)
-                                        }
-                                    }
-                                }
-
-                                if (filesToProcess.length > 0) {
-                                    processFiles(filesToProcess)
-                                    e.preventDefault()
-                                }
-                            }}
-                            value={props.hide ? '' : content()}
-                            onInput={(e) => setContent(e.currentTarget.value)}
                         />
                     </div>
+
                     <div class="mx-2 flex w-full flex-col items-center gap-6">
                         <input
                             class="bg-element text-sub placeholder-sub focus:border-highlight-strong w-full rounded border border-transparent px-2 py-1.5 font-mono text-xs font-bold outline-none"
