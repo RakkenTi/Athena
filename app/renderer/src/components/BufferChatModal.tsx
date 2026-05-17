@@ -85,12 +85,9 @@ export const BufferChatModal = () => {
         if (query === null) return []
 
         const searchLower = query.toLowerCase()
-        return (
-            Object.values(allMoments)
-                // Added safe chaining (?.) just in case your store has empty records
-                .filter((m) => m?.title?.toLowerCase().includes(searchLower))
-                .slice(0, 5)
-        )
+        return Object.values(allMoments)
+            .filter((m) => m?.title?.toLowerCase().includes(searchLower))
+            .slice(0, 5)
     })
 
     const handleDragOver = (e: DragEvent) => {
@@ -131,7 +128,6 @@ export const BufferChatModal = () => {
             chatTextAreaRef.focus()
             chatTextAreaRef.setSelectionRange(openBracketPos + 2, cursor)
 
-            // MomentCreator inserts the UUID to guarantee unique linking
             document.execCommand('insertText', false, `${moment.uuid}]] `)
         }
     }
@@ -788,7 +784,6 @@ export const BufferChatModal = () => {
                     }}
                     class="bg-element-matte border-element-accent focus:border-sub/50 text-sub w-full rounded p-2 font-bold transition-all outline-none"
                 />
-                {/* ✨ MomentCreator's Suggestion Bar */}
                 <Show
                     when={
                         isTypingReference() !== null &&
@@ -817,7 +812,6 @@ export const BufferChatModal = () => {
                         rows="1"
                         placeholder={`Message ${getActiveLibrary()?.name || 'Library'}`}
                         value={content()}
-                        // Simplified down to standard text syncing!
                         onInput={(e) => setContent(e.currentTarget.value)}
                         onPaste={(e) => {
                             const clipboardData = e.clipboardData
