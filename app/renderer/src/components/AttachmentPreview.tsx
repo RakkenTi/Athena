@@ -73,13 +73,13 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
             url.startsWith('athena://') ||
             url.includes('/uploads/') ||
             !!url.match(
-                /\.(jpeg|jpg|gif|png|webp|svg|heic|mp4|webm|mov|ogg)(\?.*)?$/i,
+                /\.(jpeg|jpg|gif|png|webp|svg|heic|mp4|webm|mov|ogg|mkv)(\?.*)?$/i,
             )
         )
     }
 
     const isVideoFile = (url: string) => {
-        return !!url.match(/\.(mp4|webm|mov|ogg)(\?.*)?$/i)
+        return !!url.match(/\.(mp4|webm|mov|ogg|mkv)(\?.*)?$/i)
     }
 
     onMount(() => {

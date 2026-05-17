@@ -8,9 +8,10 @@ import {
     type ComponentProps,
     For,
     onMount,
+    createMemo,
 } from 'solid-js'
 import {
-    allMessages,
+    allMoments,
     getActiveLibrary,
     type BufferMessage,
 } from '../modules/store'
@@ -62,6 +63,78 @@ export const BufferChatModal = () => {
     const [activeUploadCount, setActiveUploadCount] = createSignal(0)
     const [lastMutationTime, setLastMutationTime] = createSignal(0)
     const [pendingIds, setPendingIds] = createSignal<Set<string>>(new Set())
+
+    const [isDragging, setIsDragging] = createSignal<boolean>(false)
+    const isTypingReference = createMemo(() => {
+        const text = content()
+        if (!chatTextAreaRef) return null
+
+        const cursor = chatTextAreaRef.selectionStart
+        const textBeforeCursor = text.substring(0, cursor)
+
+        const lastOpen = textBeforeCursor.lastIndexOf('[[')
+        const lastClose = textBeforeCursor.lastIndexOf(']]')
+
+        if (lastOpen !== -1 && lastOpen > lastClose) {
+            return textBeforeCursor.substring(lastOpen + 2)
+        }
+        return null
+    })
+    const suggestedMoments = createMemo(() => {
+        const query = isTypingReference()
+        if (query === null) return []
+
+        const searchLower = query.toLowerCase()
+        return (
+            Object.values(allMoments)
+                // Added safe chaining (?.) just in case your store has empty records
+                .filter((m) => m?.title?.toLowerCase().includes(searchLower))
+                .slice(0, 5)
+        )
+    })
+
+    const handleDragOver = (e: DragEvent) => {
+        e.preventDefault()
+        setIsDragging(true)
+    }
+
+    const handleDragLeave = (e: DragEvent) => {
+        e.preventDefault()
+        if (
+            e.currentTarget &&
+            !(e.currentTarget as Node).contains(e.relatedTarget as Node)
+        ) {
+            setIsDragging(false)
+        }
+    }
+
+    const handleDrop = (e: DragEvent) => {
+        e.preventDefault()
+        setIsDragging(false)
+
+        const files = e.dataTransfer?.files
+        if (files && files.length > 0) {
+            processFiles(files)
+        }
+    }
+
+    const insertReference = (moment: any) => {
+        if (!chatTextAreaRef) return
+
+        const currentContent = content()
+        const cursor = chatTextAreaRef.selectionStart
+
+        const textBeforeCursor = currentContent.substring(0, cursor)
+        const openBracketPos = textBeforeCursor.lastIndexOf('[[')
+
+        if (openBracketPos !== -1) {
+            chatTextAreaRef.focus()
+            chatTextAreaRef.setSelectionRange(openBracketPos + 2, cursor)
+
+            // MomentCreator inserts the UUID to guarantee unique linking
+            document.execCommand('insertText', false, `${moment.uuid}]] `)
+        }
+    }
 
     const [isAtPresent, setIsAtPresent] = createSignal(true)
     const [showScrollBottom, setShowScrollBottom] = createSignal(false)
@@ -292,6 +365,7 @@ export const BufferChatModal = () => {
     }
 
     const sendMessage = async () => {
+        if (activeUploadCount() > 0) return
         if (!content().trim()) return
         const lib = getActiveLibrary()
         if (!lib || lib.type !== 'server') return
@@ -480,7 +554,7 @@ export const BufferChatModal = () => {
     })
 
     return (
-        <div class="border-element-accent bg-element-matte flex w-full flex-col rounded-xl border">
+        <div class="border-element-accent bg-element-matte flex max-h-[90vh] w-full flex-col rounded-xl border">
             <div class="border-element-accent flex items-center justify-between border-b p-3">
                 <h2 class="text-sub text-sm font-bold tracking-widest">
                     <i class="fa-solid fa-message text-highlight mr-2"></i> Chat
@@ -541,6 +615,17 @@ export const BufferChatModal = () => {
                                 >
                                     <Show when={!isEditing()}>
                                         <div class="bg-element-matte border-element-accent absolute top-2 right-4 z-10 hidden gap-1 rounded-lg border p-1 shadow-xl group-hover:flex">
+                                            <button
+                                                onClick={() =>
+                                                    navigator.clipboard.writeText(
+                                                        message.content,
+                                                    )
+                                                }
+                                                class="hover:bg-highlight-strong/20 text-sub hover:text-highlight-strong rounded p-1 px-2 transition-all"
+                                                title="Copy Raw Text"
+                                            >
+                                                <i class="fa-solid fa-copy text-xs"></i>
+                                            </button>
                                             <button
                                                 onClick={() =>
                                                     startEditing(message)
@@ -676,7 +761,20 @@ export const BufferChatModal = () => {
                 </Show>
             </div>
 
-            <div class="border-element-accent bg-element flex flex-col gap-2 rounded-b-xl border-t p-3">
+            <div
+                class="border-element-accent bg-element flex flex-col gap-2 rounded-b-xl border-t p-3"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+            >
+                <Show when={isDragging()}>
+                    <div class="bg-element/80 pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-b-xl backdrop-blur-sm">
+                        <span class="text-highlight text-lg font-bold drop-shadow-md">
+                            Drop files to attach
+                        </span>
+                    </div>
+                </Show>
+
                 <input
                     type="text"
                     placeholder="Your Name"
@@ -690,12 +788,36 @@ export const BufferChatModal = () => {
                     }}
                     class="bg-element-matte border-element-accent focus:border-sub/50 text-sub w-full rounded p-2 font-bold transition-all outline-none"
                 />
+                {/* ✨ MomentCreator's Suggestion Bar */}
+                <Show
+                    when={
+                        isTypingReference() !== null &&
+                        suggestedMoments().length > 0
+                    }
+                >
+                    <div class="flex w-full flex-wrap items-center gap-2 rounded-lg py-1 text-sm font-bold tracking-widest">
+                        <span class="text-sub font-black">Link to:</span>
+                        <For each={suggestedMoments()}>
+                            {(moment) => (
+                                <button
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => insertReference(moment)}
+                                    class="bg-element hover:bg-element-accent text-sub border-element-accent hover:border-highlight-strong rounded border px-2 py-1 transition-all hover:scale-105 active:scale-95"
+                                >
+                                    {moment.title}
+                                </button>
+                            )}
+                        </For>
+                    </div>
+                </Show>
+
                 <div class="flex gap-2">
                     <textarea
                         ref={(el) => (chatTextAreaRef = el)}
                         rows="1"
                         placeholder={`Message ${getActiveLibrary()?.name || 'Library'}`}
                         value={content()}
+                        // Simplified down to standard text syncing!
                         onInput={(e) => setContent(e.currentTarget.value)}
                         onPaste={(e) => {
                             const clipboardData = e.clipboardData
@@ -725,7 +847,7 @@ export const BufferChatModal = () => {
                                 sendMessage()
                             }
                         }}
-                        class="bg-element-matte border-element-accent focus:border-sub/50 text-sub w-full resize-none rounded p-3 transition-all outline-none"
+                        class="bg-element-matte border-element-accent focus:border-sub/50 text-sub field-sizing-content max-h-[25vh] w-full resize-none rounded p-3 transition-all outline-none"
                     />
                     <button
                         onClick={sendMessage}
