@@ -345,7 +345,7 @@ export const SmartEditor: Component<SmartEditorProps> = (props) => {
                         props.onFilesAdded(e.dataTransfer.files)
                     }
                 }}
-                class={`placeholder:text-sub/50 w-full resize-none bg-transparent outline-none ${props.textAreaClass || 'text-sub field-sizing-content overflow-y-auto'} ${props.maxHeightClass || 'max-h-[30vh]'}`}
+                class={`placeholder:text-sub/50 text-sub w-full resize-none bg-transparent outline-none ${props.textAreaClass || 'field-sizing-content overflow-y-auto'} ${props.maxHeightClass || 'max-h-[30vh]'}`}
             />
         </div>
     )
