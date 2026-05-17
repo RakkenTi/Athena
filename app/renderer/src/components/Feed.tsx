@@ -8,6 +8,7 @@ import {
     setDisplayType,
 } from '../modules/globals'
 import {
+    activeLibraryId,
     searchQuery,
     serverRole,
     setSearchQuery,
@@ -36,9 +37,16 @@ export const Feed: Component = () => {
             }
         }
     })
+
     createEffect(() => {
         console.log('Switch state:', switchingLibrary())
     })
+
+    createEffect(() => {
+        activeLibraryId()
+        setSearchQuery('')
+    })
+
     return (
         <div class="bg-element pt flex w-full items-center justify-center gap-2 overflow-x-hidden rounded-xl p-2 lg:p-4">
             <div class={'flex h-full w-[90%] flex-col items-center gap-4'}>
@@ -58,6 +66,7 @@ export const Feed: Component = () => {
                             }
                         }}
                         onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                        value={searchQuery()}
                         onFocusOut={() => setIsSearching(false)}
                         placeholder="Search Moments"
                         class={`${isSearching() ? 'w-full px-2 py-1' : 'w-0 p-0 opacity-0'} bg-element text-sub/80 border-plain/20 rounded-md border transition-all duration-300 focus:outline-none`}
