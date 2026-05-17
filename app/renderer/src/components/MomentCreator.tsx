@@ -10,6 +10,7 @@ import {
 } from 'solid-js'
 import { Line } from './Line'
 import {
+    activeLibraryId,
     activeUploadCount,
     allMoments,
     allTags,
@@ -150,7 +151,7 @@ export const MomentCreator: Component<
 
     onMount(() => {
         createEffect(() => {
-            if (displayedModal() != 'NONE') return
+            activeLibraryId()
             setEditingMomentId()
             setContent('')
             setTitle('')
