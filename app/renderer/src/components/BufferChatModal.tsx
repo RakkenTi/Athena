@@ -599,6 +599,7 @@ export const BufferChatModal = () => {
                 />
                 <div class="flex items-end gap-2">
                     <SmartEditor
+                        focusOn={() => displayedModal() === 'CHAT_MODAL'}
                         value={content()}
                         onInput={setContent}
                         onSubmit={sendMessage}

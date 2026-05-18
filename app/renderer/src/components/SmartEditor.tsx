@@ -9,6 +9,7 @@ import {
 import { allMoments } from '../modules/store'
 
 export interface SmartEditorProps {
+    focusOn?: () => boolean
     value: string
     onInput: (val: string) => void
     onSubmit: () => void
@@ -29,6 +30,12 @@ export interface SmartEditorProps {
 
 export const SmartEditor: Component<SmartEditorProps> = (props) => {
     let textAreaRef: HTMLTextAreaElement | undefined
+
+    createEffect(() => {
+        if (props.focusOn?.()) {
+            textAreaRef?.focus()
+        }
+    })
 
     const [cursorPos, setCursorPos] = createSignal(0)
     const [query, setQuery] = createSignal<string | null>(null)
