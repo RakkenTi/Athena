@@ -171,6 +171,8 @@ export const BufferChatModal = () => {
             if (res.ok) {
                 const data: BufferMessage[] = await res.json()
 
+                let hasNewMessage = false
+
                 setPendingIds((prev) => {
                     const next = new Set(prev)
                     data.forEach((d) => next.delete(d.id))
@@ -195,6 +197,10 @@ export const BufferChatModal = () => {
                     data.forEach((m) => {
                         const existing = prevMsgs.find((p) => p.id === m.id)
 
+                        if (!existing) {
+                            hasNewMessage = true
+                        }
+
                         if (existing && existing.content === m.content) {
                             existing.timestamp = m.timestamp
                             merged.set(m.id, existing)
@@ -216,7 +222,7 @@ export const BufferChatModal = () => {
                     )
                 })
 
-                if (wasAtBottom) scrollToBottom()
+                if (wasAtBottom && hasNewMessage) scrollToBottom()
             }
         } catch (err) {}
     }
