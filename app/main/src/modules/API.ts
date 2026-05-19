@@ -479,10 +479,8 @@ export const Api: IPC_API = {
         }
     },
     requestUpdateCheck: async () =>
-      new Promise((resolve) => {
-        autoUpdater.
-        
-        autoUpdater.once('update-available', () => {
+        new Promise((resolve) => {
+            autoUpdater.once('update-available', () => {
                 resolve('AVAILABLE')
             })
 
