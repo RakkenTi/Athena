@@ -138,8 +138,20 @@ export const [inspectingImageExternalLink, setInspectingImageExternalLink] =
 export const [inspectingImage, setInspectingImage] = createSignal<
     string | undefined
 >()
+
+type Metadata = Awaited<ReturnType<typeof IpcApi.scrapeWebsiteData>>
+type Dimensions = {
+    width: number
+    height: number
+}
+
+export type LinkPreviewData = {
+    metadata: Metadata
+    dimensions: Dimensions
+}
+
 export const [linkPreviewCache, setLinkPreviewCache] = createStore<
-    Record<string, Awaited<ReturnType<typeof IpcApi.scrapeWebsiteData>>>
+    Record<string, LinkPreviewData>
 >({})
 
 // Moment Creator form fields
