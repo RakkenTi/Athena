@@ -479,8 +479,10 @@ export const Api: IPC_API = {
         }
     },
     requestUpdateCheck: async () =>
-        new Promise((resolve) => {
-            autoUpdater.once('update-available', () => {
+      new Promise((resolve) => {
+        autoUpdater.
+        
+        autoUpdater.once('update-available', () => {
                 resolve('AVAILABLE')
             })
 
@@ -496,6 +498,10 @@ export const Api: IPC_API = {
                 autoUpdater.checkForUpdates()
             } catch (error) {
                 resolve('ERROR')
+            } finally {
+                autoUpdater.removeAllListeners('update-available')
+                autoUpdater.removeAllListeners('update-not-available')
+                autoUpdater.removeAllListeners('error')
             }
         }),
 }
