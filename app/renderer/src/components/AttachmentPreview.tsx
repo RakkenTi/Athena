@@ -90,9 +90,7 @@ const SmartImage: Component<{
 
         const handleOnline = () => {
             if (hasError()) {
-                setHasError(false)
-                setIsLoaded(false)
-                setRetryKey((k) => k + 1)
+                attemptRefetch()
             }
         }
 
@@ -127,7 +125,7 @@ const SmartImage: Component<{
                         e.stopPropagation()
                         attemptRefetch()
                     }}
-                    class="bg-element-matte border-element-accent absolute inset-0 flex flex-col items-center justify-center rounded border border-dashed p-4"
+                    class="bg-element-matte border-element-accent absolute inset-0 flex cursor-pointer flex-col items-center justify-center rounded border border-dashed p-4"
                 >
                     <i class="fa-solid fa-link-slash text-sub/50 mb-2 text-2xl"></i>
                     <span class="text-sub/50 text-center text-xs font-bold">
@@ -208,8 +206,16 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
         onCleanup(() => viewObserver.disconnect())
     })
 
+    const shouldFetch = () => {
+        const url = cleanUrl()
+        if (!url) return null
+        if (isDirectMedia(url)) return url
+        if (unwrap(linkPreviewCache).metadata[url]) return url
+        return inView() ? url : null
+    }
+
     const [websiteData] = createResource(
-        () => (inView() ? cleanUrl() : null),
+        shouldFetch,
         async (url) => {
             console.log('Attempting to get data for: ', url)
             const cache = unwrap(linkPreviewCache)
@@ -264,6 +270,7 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
             setLinkPreviewCache('metadata', url, result)
             return result
         },
+        { initialValue: unwrap(linkPreviewCache).metadata[cleanUrl()] },
     )
 
     const githubRawUrl = createMemo(() => getGithubRawUrl(cleanUrl()))
@@ -334,7 +341,6 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
         return websiteData() && (websiteData()?.image || websiteData()?.video)
     }
 
-    // File
     const extension = createMemo(
         () => props.link.split('.').pop()?.toLowerCase() || '',
     )
@@ -389,7 +395,7 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                                     style={{
                                                         'background-image': `url(${props.link || ''})`,
                                                         'background-size':
-                                                            'contain',
+                                                            'cover',
                                                         'background-position':
                                                             'center',
                                                     }}
@@ -425,7 +431,7 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                     class={`bg-highlight border-sub hover:border-highlight-strongest flex ${hasMediaData() ? 'min-h-20 p-2' : 'p-1'} w-full flex-col justify-center gap-1 rounded border-2 transition-all duration-300`}
                                 >
                                     <Show
-                                        when={hasMediaData() && inView()}
+                                        when={hasMediaData()}
                                         fallback={
                                             <div
                                                 onClick={() =>
@@ -507,18 +513,16 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                         </div>
                                         <Switch>
                                             <Match when={websiteData.loading}>
-                                                <div class="bg-element w-full animate-pulse"></div>
+                                                <div class="bg-element min-h-25 w-full animate-pulse rounded"></div>
                                             </Match>
                                             <Match when={isPDF()}>
                                                 <LocalPDFPreview
                                                     url={cleanUrl()}
                                                 ></LocalPDFPreview>
                                             </Match>
+
                                             <Match
-                                                when={
-                                                    !videoLink() &&
-                                                    !websiteData()?.video
-                                                }
+                                                when={!!websiteData()?.image}
                                             >
                                                 <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
                                                     <div
@@ -526,7 +530,7 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                                         style={{
                                                             'background-image': `url(${websiteData()?.image || ''})`,
                                                             'background-size':
-                                                                'contain',
+                                                                'cover',
                                                             'background-position':
                                                                 'center',
                                                         }}
@@ -550,6 +554,7 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                                     />
                                                 </div>
                                             </Match>
+
                                             <Match
                                                 when={
                                                     videoLink() ||
@@ -583,9 +588,6 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                                         )
                                                     }
                                                     if (videoLink()) {
-                                                        console.log(
-                                                            `Displaying ${link()} as iframe.`,
-                                                        )
                                                         return (
                                                             <iframe
                                                                 loading="lazy"
