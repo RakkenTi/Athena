@@ -32,6 +32,7 @@ import {
     getActiveLibrary,
     setInspectingImage,
     setLinkPreviewCache,
+    EmptyLinkPreviewCache,
 } from './store'
 import {
     extractBaseURL,
@@ -783,7 +784,7 @@ export const updateSetting = <K extends keyof AppSettings>(
 }
 
 export const ClearWebsiteCache = () => {
-    setLinkPreviewCache(reconcile({}))
+    setLinkPreviewCache(reconcile(EmptyLinkPreviewCache))
 }
 
 export const regenerateAllColours = () => {

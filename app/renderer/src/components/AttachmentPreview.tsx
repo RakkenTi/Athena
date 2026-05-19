@@ -35,7 +35,6 @@ import {
 } from '../modules/globals'
 import { LocalPDFPreview } from './PDFPreview'
 import { unwrap } from 'solid-js/store'
-import { PrefabExpandableContainer } from './PrefabExpandableContainer'
 
 interface AttachmentPreviewProps extends ComponentProps<'div'> {
     link: string
@@ -52,14 +51,126 @@ const getGithubRawUrl = (url: string) => {
     return null
 }
 
+const SmartImage: Component<{
+    src: string
+    class?: string
+    onClick?: () => void
+}> = (props) => {
+    let imgRef: HTMLImageElement | undefined
+    const [isLoaded, setIsLoaded] = createSignal(false)
+    const [hasError, setHasError] = createSignal(false)
+    const [retryKey, setRetryKey] = createSignal(0)
+
+    const dims = () => linkPreviewCache.dimensions[props.src]
+
+    const handleLoad = () => {
+        if (!imgRef) return
+
+        if (imgRef.naturalWidth > 0 && imgRef.naturalHeight > 0) {
+            setLinkPreviewCache('dimensions', props.src, {
+                width: imgRef.naturalWidth,
+                height: imgRef.naturalHeight,
+            })
+            setHasError(false)
+            setIsLoaded(true)
+        } else {
+            setHasError(true)
+            setIsLoaded(true)
+        }
+    }
+
+    const attemptRefetch = () => {
+        setHasError(false)
+        setIsLoaded(false)
+        setRetryKey((k) => k + 1)
+    }
+
+    onMount(() => {
+        if (imgRef && imgRef.complete) handleLoad()
+
+        const handleOnline = () => {
+            if (hasError()) {
+                setHasError(false)
+                setIsLoaded(false)
+                setRetryKey((k) => k + 1)
+            }
+        }
+
+        window.addEventListener('online', handleOnline)
+        onCleanup(() => window.removeEventListener('online', handleOnline))
+    })
+
+    const currentSrc = () => {
+        if (retryKey() === 0) return props.src
+        const separator = props.src.includes('?') ? '&' : '?'
+        return `${props.src}${separator}retry=${retryKey()}`
+    }
+
+    return (
+        <div
+            class={`relative z-10 flex w-full items-center justify-center overflow-hidden transition-all duration-300 ${props.class || ''} ${!dims() ? 'min-h-37.5' : ''}`}
+            style={{
+                'aspect-ratio': dims()
+                    ? `${dims()!.width} / ${dims()!.height}`
+                    : undefined,
+            }}
+        >
+            <Show when={!isLoaded() && !hasError()}>
+                <div class="bg-element-accent absolute inset-0 flex animate-pulse items-center justify-center rounded">
+                    <i class="fa-solid fa-image text-sub/30 text-3xl"></i>
+                </div>
+            </Show>
+
+            <Show when={hasError()}>
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        attemptRefetch()
+                    }}
+                    class="bg-element-matte border-element-accent absolute inset-0 flex flex-col items-center justify-center rounded border border-dashed p-4"
+                >
+                    <i class="fa-solid fa-link-slash text-sub/50 mb-2 text-2xl"></i>
+                    <span class="text-sub/50 text-center text-xs font-bold">
+                        Failed to load preview.
+                    </span>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            attemptRefetch()
+                        }}
+                        class="text-highlight mt-2 text-xs font-bold hover:underline"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </Show>
+
+            <img
+                ref={imgRef}
+                src={currentSrc()}
+                onClick={props.onClick}
+                onLoad={handleLoad}
+                onError={() => {
+                    setHasError(true)
+                    setIsLoaded(true)
+                }}
+                class={`h-full w-full object-contain transition-opacity duration-300 ${
+                    isLoaded() && !hasError()
+                        ? 'opacity-100'
+                        : 'pointer-events-none absolute opacity-0'
+                }`}
+            />
+        </div>
+    )
+}
+
 export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
-    // Common
     const isFile = () => props.link.match(FILE_REF_REGEX)
     const isURL = () => props.link.match(URL_REGEX)
     const isPDF = () => {
         return !!props.link.match(/\.(pdf)(\?.*)?$/i)
     }
-    // URL
+
     let containerRef: HTMLDivElement | undefined
     const [inView, setInView] = createSignal<boolean>(false)
 
@@ -130,8 +241,8 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                 }
             }
 
-            if (cache && cache[url]) {
-                const cachedData = cache[url]
+            if (cache && cache.metadata[url]) {
+                const cachedData = cache.metadata[url]
                 if (cachedData.image == '' && cachedData.video == '') {
                     forceScrape = true
                     console.warn(
@@ -139,7 +250,7 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                     )
                 } else {
                     console.log('Loading cached data for link preview.')
-                    return cache[url]
+                    return cachedData
                 }
             }
 
@@ -150,7 +261,7 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
             }
             console.log(`Attempting to scrape ${url}`)
             const result = await api.scrapeWebsiteData(url, forceScrape)
-            setLinkPreviewCache(url, result)
+            setLinkPreviewCache('metadata', url, result)
             return result
         },
     )
@@ -283,10 +394,10 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                                             'center',
                                                     }}
                                                 />
-                                                <img
+                                                <SmartImage
                                                     src={props.link}
                                                     class={`bg-element z-10 ${maxImageHeight()} w-full rounded object-contain hover:cursor-pointer`}
-                                                ></img>
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -395,6 +506,9 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                             </button>
                                         </div>
                                         <Switch>
+                                            <Match when={websiteData.loading}>
+                                                <div class="bg-element w-full animate-pulse"></div>
+                                            </Match>
                                             <Match when={isPDF()}>
                                                 <LocalPDFPreview
                                                     url={cleanUrl()}
@@ -417,7 +531,11 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                                                 'center',
                                                         }}
                                                     />
-                                                    <img
+                                                    <SmartImage
+                                                        src={
+                                                            websiteData()
+                                                                ?.image || ''
+                                                        }
                                                         onClick={() => {
                                                             const url =
                                                                 websiteData()
@@ -429,7 +547,6 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                                             }
                                                         }}
                                                         class={`border-highlight-alt-strongest bg-element z-10 ${maxImageHeight()} rounded object-contain hover:cursor-pointer`}
-                                                        src={`${websiteData()?.image || ''}`}
                                                     />
                                                 </div>
                                             </Match>

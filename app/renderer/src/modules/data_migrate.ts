@@ -20,6 +20,7 @@ const DEFAULT_LIBRARY: Library = {
     id: DEFAULT_LIBRARY_ID,
     name: 'My Library',
     type: 'local',
+    messages: [],
 }
 
 export const emptySnapshot: DataSnapshot = {
@@ -45,9 +46,9 @@ const migrateSingleLibraryToMulti = (rawData: any): DataSnapshot => {
         archives: rawData.archives || {},
         moments: rawData.moments || {},
         tags: rawData.tags || {},
+        messages: [],
     }
 
-    // Guarantee the default archive is present
     if (!(libSnapshot.archives as any)[defaultArchiveId]) {
         ;(libSnapshot.archives as any)[defaultArchiveId] = {
             uuid: defaultArchiveId,
@@ -152,6 +153,7 @@ const migrateFirstLegacy = (rawData: any): DataSnapshot => {
                 archives: newArchives,
                 moments: newMoments,
                 tags: newTags,
+                messages: [],
             },
         },
         linkPreviewCache: {}, // Ancient formats get an empty cache

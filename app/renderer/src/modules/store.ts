@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js'
-import type { IpcApi } from '../../../main/src/types/APISchema'
+import type { ScrapeData } from '../../../main/src/types/APISchema'
 import { createStore } from 'solid-js/store'
 
 // Constants
@@ -139,20 +139,27 @@ export const [inspectingImage, setInspectingImage] = createSignal<
     string | undefined
 >()
 
-type Metadata = Awaited<ReturnType<typeof IpcApi.scrapeWebsiteData>>
-type Dimensions = {
-    width: number
-    height: number
-}
+type LinkMetadata = Record<string, ScrapeData>
+type Dimensions = Record<
+    string,
+    {
+        width: number
+        height: number
+    }
+>
 
-export type LinkPreviewData = {
-    metadata: Metadata
+export type LinkPreviewCache = {
+    metadata: LinkMetadata
     dimensions: Dimensions
 }
 
-export const [linkPreviewCache, setLinkPreviewCache] = createStore<
-    Record<string, LinkPreviewData>
->({})
+export const EmptyLinkPreviewCache: LinkPreviewCache = {
+    metadata: {} as LinkMetadata,
+    dimensions: {} as Dimensions,
+}
+
+export const [linkPreviewCache, setLinkPreviewCache] =
+    createStore<LinkPreviewCache>(EmptyLinkPreviewCache)
 
 // Moment Creator form fields
 export const [title, setTitle] = createSignal<string>('')
