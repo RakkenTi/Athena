@@ -469,26 +469,6 @@ export const BufferChatModal = () => {
         return currTime !== prevTime
     }
 
-    createEffect(() => {
-        if (!chatContainerRef) return
-
-        const handleImageLoad = (e: Event) => {
-            const target = e.target as HTMLElement
-
-            if (target.tagName === 'IMG' || target.tagName === 'VIDEO') {
-                if (!showScrollBottom()) {
-                    chatContainerRef!.scrollTop = chatContainerRef!.scrollHeight
-                }
-            }
-        }
-
-        chatContainerRef.addEventListener('load', handleImageLoad, true)
-
-        onCleanup(() => {
-            chatContainerRef.removeEventListener('load', handleImageLoad, true)
-        })
-    })
-
     return (
         <div class="border-element-accent bg-element-matte flex max-h-[90vh] w-full flex-col rounded-xl border">
             <div class="border-element-accent flex items-center justify-between border-b p-3">
